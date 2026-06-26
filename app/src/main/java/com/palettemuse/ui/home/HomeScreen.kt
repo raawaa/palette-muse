@@ -25,7 +25,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFloatingActionButton
@@ -117,10 +123,10 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "menu",
-                        fontSize = 20.sp,
-                        color = Color(0xFF524345)
+                    Icon(
+                        Icons.Default.Menu,
+                        contentDescription = "Menu",
+                        tint = Color(0xFF524345)
                     )
                     Text(
                         text = "ChromaMuse",
@@ -130,10 +136,10 @@ fun HomeScreen(
                         color = RoseGold,
                         letterSpacing = (-0.5).sp
                     )
-                    Text(
-                        text = "account_circle",
-                        fontSize = 20.sp,
-                        color = Color(0xFF524345)
+                    Icon(
+                        Icons.Default.AccountCircle,
+                        contentDescription = "Account",
+                        tint = Color(0xFF524345)
                     )
                 }
 
@@ -246,10 +252,10 @@ fun HomeScreen(
                         fontSize = 18.sp,
                         color = Color(0xFF1C1B1B)
                     )
-                    Text(
-                        text = "tune",
-                        fontSize = 20.sp,
-                        color = Color(0xFF5C5D6E)
+                    Icon(
+                        Icons.Default.Tune,
+                        contentDescription = "Filter",
+                        tint = Color(0xFF5C5D6E)
                     )
                 }
 
@@ -330,7 +336,12 @@ fun HomeScreen(
             ) {
                 // Home (active)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("home", fontSize = 24.sp, color = RoseGold, fontWeight = FontWeight.Bold)
+                    Icon(
+                        Icons.Default.Home,
+                        contentDescription = "Home",
+                        tint = RoseGold,
+                        modifier = Modifier.size(24.dp)
+                    )
                     Text(
                         "home",
                         fontSize = 10.sp,
@@ -345,7 +356,12 @@ fun HomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.clickable { onNavigateToCapture() }
                 ) {
-                    Text("photo_camera", fontSize = 24.sp, color = Color(0xFF5C5D6E).copy(alpha = 0.6f))
+                    Icon(
+                        Icons.Default.PhotoCamera,
+                        contentDescription = "Camera",
+                        tint = Color(0xFF5C5D6E).copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    )
                     Text(
                         "photo_camera",
                         fontSize = 10.sp,
@@ -357,7 +373,12 @@ fun HomeScreen(
 
                 // Profile
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("person", fontSize = 24.sp, color = Color(0xFF5C5D6E).copy(alpha = 0.6f))
+                    Icon(
+                        Icons.Default.Person,
+                        contentDescription = "Profile",
+                        tint = Color(0xFF5C5D6E).copy(alpha = 0.6f),
+                        modifier = Modifier.size(24.dp)
+                    )
                     Text(
                         "person",
                         fontSize = 10.sp,

@@ -14,6 +14,13 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FlashOn
+import androidx.compose.material.icons.filled.FlipCameraIos
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -128,7 +135,10 @@ fun CaptureScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Close button
-                GlassCircleButton(text = "close", onClick = onBack)
+                GlassCircleButton(
+                    icon = { Icon(Icons.Default.Close, contentDescription = "Close", tint = Color(0xFF1C1B1B)) },
+                    onClick = onBack
+                )
 
                 // Target color pill
                 Box(
@@ -165,7 +175,10 @@ fun CaptureScreen(
                 }
 
                 // Flash button
-                GlassCircleButton(text = "flash_on", onClick = {})
+                GlassCircleButton(
+                    icon = { Icon(Icons.Default.FlashOn, contentDescription = "Flash", tint = Color(0xFF1C1B1B)) },
+                    onClick = {}
+                )
             }
         }
 
@@ -183,7 +196,7 @@ fun CaptureScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("🎨", fontSize = 18.sp)
+                    Icon(Icons.Default.Palette, contentDescription = null, tint = RoseGold, modifier = Modifier.size(20.dp))
                     Text(
                         text = "${uiState.matchPercentage}% Match",
                         fontSize = 18.sp,
@@ -293,7 +306,7 @@ fun CaptureScreen(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("+", fontSize = 24.sp, color = Color(0xFFD7C1C3))
+                        Icon(Icons.Default.Add, contentDescription = "Add", tint = Color(0xFFD7C1C3), modifier = Modifier.size(32.dp))
                     }
                 }
             }
@@ -304,7 +317,10 @@ fun CaptureScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                GlassCircleButton(text = "flip_camera_ios", onClick = { viewModel.flipCamera() })
+                GlassCircleButton(
+                    icon = { Icon(Icons.Default.FlipCameraIos, contentDescription = "Flip", tint = Color(0xFF1C1B1B)) },
+                    onClick = { viewModel.flipCamera() }
+                )
 
                 // Main shutter button
                 Box(
@@ -330,14 +346,20 @@ fun CaptureScreen(
                     )
                 }
 
-                GlassCircleButton(text = "tune", onClick = {})
+                GlassCircleButton(
+                    icon = { Icon(Icons.Default.Tune, contentDescription = "Tune", tint = Color(0xFF1C1B1B)) },
+                    onClick = {}
+                )
             }
         }
     }
 }
 
 @Composable
-private fun GlassCircleButton(text: String, onClick: () -> Unit) {
+private fun GlassCircleButton(
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit
+) {
     Box(
         modifier = Modifier
             .size(48.dp)
@@ -347,7 +369,7 @@ private fun GlassCircleButton(text: String, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, fontSize = 20.sp, color = Color(0xFF1C1B1B))
+        icon()
     }
 }
 
