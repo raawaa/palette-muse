@@ -20,16 +20,17 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -39,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.palettemuse.theme.Dimens
+import com.palettemuse.theme.SuccessGreen
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -55,6 +58,9 @@ fun ExportScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Moodboard 海报导出") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -69,7 +75,7 @@ fun ExportScreen(
             }
         } else if (uiState.error != null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("生成失败: ${uiState.error}", color = Color.Gray)
+                Text("生成失败: ${uiState.error}", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             Column(
@@ -77,7 +83,7 @@ fun ExportScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(Dimens.stackMd),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // Preview
@@ -92,7 +98,7 @@ fun ExportScreen(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Dimens.stackLg))
 
                 Text(
                     text = "Moodboard Color Harmony",
@@ -101,7 +107,7 @@ fun ExportScreen(
                     textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Dimens.stackLg))
 
                 // Share button
                 OutlinedButton(
@@ -119,18 +125,18 @@ fun ExportScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp)
+                    shape = RoundedCornerShape(Dimens.buttonCorner)
                 ) {
                     Text("📤 共享", modifier = Modifier.padding(vertical = 4.dp), fontSize = 16.sp)
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Dimens.gutter))
 
                 Button(
                     onClick = { viewModel.savePoster(context) },
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB76E79))
+                    shape = RoundedCornerShape(Dimens.buttonCorner),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
                     Text(
                         "💾 保存海报",
@@ -140,10 +146,10 @@ fun ExportScreen(
                 }
 
                 if (uiState.exportSuccess) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Dimens.stackSm))
                     Text(
                         text = "✓ 已保存到相册",
-                        color = Color(0xFF4CAF50),
+                        color = SuccessGreen,
                         fontWeight = FontWeight.SemiBold
                     )
                 }

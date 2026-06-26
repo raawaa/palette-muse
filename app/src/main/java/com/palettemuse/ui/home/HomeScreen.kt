@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFloatingActionButton
@@ -35,13 +34,13 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.palettemuse.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,6 +63,9 @@ fun HomeScreen(
         topBar = {
             TopAppBar(
                 title = { Text("ChromaMuse", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
                 actions = {
                     IconButton(onClick = { /* menu */ }) {
                         Icon(Icons.Default.Menu, contentDescription = "菜单")
@@ -76,14 +79,16 @@ fun HomeScreen(
         floatingActionButton = {
             LargeFloatingActionButton(
                 onClick = onNavigateToCapture,
-                shape = RoundedCornerShape(28.dp),
-                containerColor = Color(0xFFB76E79)
+                shape = RoundedCornerShape(Dimens.pillShape),
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "新建", tint = Color.White)
+                Icon(Icons.Default.Add, contentDescription = "新建", tint = MaterialTheme.colorScheme.onPrimary)
             }
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surface
+            ) {
                 NavigationBarItem(
                     selected = true,
                     onClick = { },
@@ -119,16 +124,16 @@ fun HomeScreen(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🎨", fontSize = 64.sp)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(Dimens.stackMd))
                     Text(
                         text = "我的作品集",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 24.sp
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Dimens.stackSm))
                     Text(
                         text = "拍摄你的第一个色彩灵感",
-                        color = Color.Gray,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         fontSize = 16.sp
                     )
                 }
@@ -139,9 +144,9 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding),
-                contentPadding = PaddingValues(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(Dimens.gutter),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.stackSm),
+                verticalArrangement = Arrangement.spacedBy(Dimens.stackSm)
             ) {
                 items(uiState.projects, key = { it.id }) { project ->
                     ProjectCard(
@@ -163,8 +168,13 @@ private fun ProjectCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(Dimens.cardCorner),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp
+        )
     ) {
         Column {
             val bitmap = BitmapFactory.decodeFile(project.imagePath)
@@ -175,7 +185,7 @@ private fun ProjectCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)),
+                        .clip(RoundedCornerShape(Dimens.cardCorner)),
                     contentScale = ContentScale.Crop
                 )
             } else {
@@ -183,7 +193,7 @@ private fun ProjectCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f)
-                        .background(Color(0xFFF0EDED)),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("🖼", fontSize = 32.sp)
@@ -192,7 +202,7 @@ private fun ProjectCard(
 
             Text(
                 text = project.title,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = Dimens.gutter, vertical = Dimens.stackSm),
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

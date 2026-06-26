@@ -1,5 +1,10 @@
 package com.palettemuse.ui.navigation
 
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
@@ -34,6 +39,16 @@ fun PaletteMuseNavGraph() {
     NavDisplay(
         backStack = backStack,
         onBack = { backStack.removeLastOrNull() },
+        // Forward navigation: new content slides in from right, old slides out 1/3 to left
+        transitionSpec = {
+            slideInHorizontally(initialOffsetX = { it }) + fadeIn() togetherWith
+                slideOutHorizontally(targetOffsetX = { -it / 3 }) + fadeOut()
+        },
+        // Back navigation: returning content slides in from left, current slides 1/3 to right
+        popTransitionSpec = {
+            slideInHorizontally(initialOffsetX = { -it / 3 }) + fadeIn() togetherWith
+                slideOutHorizontally(targetOffsetX = { it }) + fadeOut()
+        },
         entryDecorators = listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator()

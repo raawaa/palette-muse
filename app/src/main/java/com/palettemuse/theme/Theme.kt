@@ -2,13 +2,15 @@ package com.palettemuse.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
 // Rose Gold / Aura Aesthetic palette
@@ -48,6 +50,17 @@ private val LightColorScheme = lightColorScheme(
     inverseOnSurface = Color(0xFFF3F0EF),
 )
 
+// ===================================================================
+// Glassmorphism
+// 20px backdrop-blur + 60% white fill + 0.5px white border（降级方案）
+// Android 12+ 可使用 RenderEffect.createBlurEffect() 实现真实模糊
+// ===================================================================
+val GlassBackground = Brush.verticalGradient(
+    colors = listOf(GlassWhite, GlassWhiteLight)
+)
+
+val GlassShape = RoundedCornerShape(28.dp)
+
 @Composable
 fun PaletteMuseTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -58,7 +71,8 @@ fun PaletteMuseTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.surface.toArgb()
+            // enableEdgeToEdge() in MainActivity handles transparent status bar;
+            // only set icon appearance here
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
         }
     }

@@ -31,9 +31,11 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFloatingActionButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +59,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.palettemuse.camera.CameraManager
+import com.palettemuse.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +96,9 @@ fun CaptureScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                 },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -113,10 +119,11 @@ fun CaptureScreen(
                         onError = { /* todo: show error snackbar */ }
                     )
                 },
-                shape = CircleShape
+                shape = CircleShape,
+                containerColor = MaterialTheme.colorScheme.primary
             ) {
                 if (uiState.isAnalyzing) {
-                    CircularProgressIndicator(color = Color.White)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
                 } else {
                     Text("📸", fontSize = 28.sp)
                 }
@@ -155,24 +162,24 @@ fun CaptureScreen(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("需要相机权限", color = Color.Gray)
+                        Text("需要相机权限", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
 
-                // Match percentage overlay
+                // Match percentage overlay with glassmorphism
                 Box(
                     modifier = Modifier
                         .align(Alignment.TopCenter)
-                        .padding(top = 16.dp)
+                        .padding(top = Dimens.stackMd)
                         .background(
-                            Color.Black.copy(alpha = 0.6f),
-                            RoundedCornerShape(20.dp)
+                            MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                            RoundedCornerShape(Dimens.chipCorner)
                         )
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                        .padding(horizontal = Dimens.stackMd, vertical = Dimens.stackSm)
                 ) {
                     Text(
                         text = "${uiState.matchPercentage}% MATCH",
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onSurface,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
                     )
@@ -182,7 +189,7 @@ fun CaptureScreen(
                 Row(
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(16.dp)
+                        .padding(Dimens.stackMd)
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly,
                     verticalAlignment = Alignment.CenterVertically
@@ -203,20 +210,20 @@ fun CaptureScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp)
+                    .padding(Dimens.stackMd)
             ) {
                 Text(
                     text = "已捕捉 (${uiState.capturedSwatches.size})",
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(Dimens.stackSm))
 
                 Row(
                     modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.gutter)
                 ) {
                     uiState.capturedSwatches.forEach { swatch ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -225,13 +232,13 @@ fun CaptureScreen(
                                     .size(56.dp)
                                     .clip(CircleShape)
                                     .background(Color(android.graphics.Color.parseColor(swatch.hexColor)))
-                                    .border(2.dp, Color.White, CircleShape)
+                                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = "${swatch.matchPercentage}%",
                                 fontSize = 11.sp,
-                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }

@@ -26,9 +26,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -42,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.palettemuse.theme.Dimens
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +60,9 @@ fun AnalyzeScreen(
         topBar = {
             TopAppBar(
                 title = { Text("穿搭色彩分析") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
@@ -71,7 +77,7 @@ fun AnalyzeScreen(
             }
         } else if (uiState.error != null) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("加载失败: ${uiState.error}", color = Color.Gray)
+                Text("加载失败: ${uiState.error}", color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         } else {
             val project = uiState.project ?: return@Scaffold
@@ -82,7 +88,7 @@ fun AnalyzeScreen(
                     .fillMaxSize()
                     .padding(padding)
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp)
+                    .padding(Dimens.stackMd)
             ) {
                 // Photo
                 val bitmap = BitmapFactory.decodeFile(project.imagePath)
@@ -93,23 +99,23 @@ fun AnalyzeScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(3f / 4f)
-                            .clip(RoundedCornerShape(28.dp)),
+                            .clip(RoundedCornerShape(Dimens.cardCorner)),
                         contentScale = ContentScale.Crop
                     )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(Dimens.containerMargin))
 
                 // Color tags
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(Dimens.stackSm)) {
                     palettes.forEach { palette ->
                         Box(
                             modifier = Modifier
                                 .background(
                                     Color(android.graphics.Color.parseColor(palette.hexColor)),
-                                    RoundedCornerShape(20.dp)
+                                    RoundedCornerShape(Dimens.chipCorner)
                                 )
-                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .padding(horizontal = Dimens.stackMd, vertical = 6.dp)
                         ) {
                             Text(
                                 text = palette.semanticName.uppercase(),
@@ -122,7 +128,7 @@ fun AnalyzeScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Dimens.stackLg))
 
                 // Color palette section
                 Text(
@@ -131,7 +137,7 @@ fun AnalyzeScreen(
                     fontSize = 18.sp
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(Dimens.gutter))
 
                 palettes.forEach { palette ->
                     Row(
@@ -143,10 +149,10 @@ fun AnalyzeScreen(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .clip(RoundedCornerShape(28.dp))
+                                .clip(RoundedCornerShape(Dimens.cardCorner))
                                 .background(Color(android.graphics.Color.parseColor(palette.hexColor)))
                         )
-                        Spacer(modifier = Modifier.width(12.dp))
+                        Spacer(modifier = Modifier.width(Dimens.gutter))
                         Column {
                             Text(
                                 text = palette.role.name,
@@ -155,28 +161,28 @@ fun AnalyzeScreen(
                             )
                             Text(
                                 text = palette.semanticName,
-                                color = Color.Gray,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 fontSize = 12.sp
                             )
                         }
                         Spacer(modifier = Modifier.weight(1f))
                         Text(
                             text = palette.hexColor,
-                            color = Color.Gray,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             fontSize = 12.sp
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(Dimens.stackLg))
 
                 // CTA
                 Button(
                     onClick = onNavigateToExport,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(28.dp),
+                    shape = RoundedCornerShape(Dimens.buttonCorner),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFFB76E79)
+                        containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text(
