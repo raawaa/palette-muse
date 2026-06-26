@@ -3,6 +3,7 @@ package com.palettemuse.ui.export
 import android.content.Intent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -59,7 +60,7 @@ fun ExportScreen(
             TopAppBar(
                 title = { Text("Moodboard 海报导出") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.White.copy(alpha = 0.6f)
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {

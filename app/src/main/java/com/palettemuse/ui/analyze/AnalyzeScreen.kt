@@ -61,7 +61,7 @@ fun AnalyzeScreen(
             TopAppBar(
                 title = { Text("穿搭色彩分析") },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color.White.copy(alpha = 0.6f)
                 ),
                 navigationIcon = {
                     IconButton(onClick = onBack) {

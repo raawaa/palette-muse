@@ -58,7 +58,7 @@ class PosterRenderer @Inject constructor() {
         val titlePaint = Paint().apply {
             color = Color.parseColor("#1A1A1A")
             textSize = 64f
-            typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+            typeface = Typeface.create("playfair display", Typeface.BOLD)
             isAntiAlias = true
         }
         canvas.drawText(config.title, 40f, swatchY + swatchHeight + 120f, titlePaint)
@@ -67,7 +67,7 @@ class PosterRenderer @Inject constructor() {
         val subtitlePaint = Paint().apply {
             color = Color.parseColor("#857374")
             textSize = 32f
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+            typeface = Typeface.create("plus jakarta sans", Typeface.NORMAL)
             isAntiAlias = true
         }
         canvas.drawText(config.subtitle, 40f, swatchY + swatchHeight + 180f, subtitlePaint)
