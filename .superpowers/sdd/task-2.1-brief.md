@@ -1,3 +1,13 @@
+### Task 2.1: ColorAnalyzer — 取色算法
+
+**Files:**
+- Create: `app/src/main/java/com/palettemuse/core/ColorAnalyzer.kt`
+
+- [ ] **Step 1: 实现 ColorAnalyzer**
+
+`app/src/main/java/com/palettemuse/core/ColorAnalyzer.kt`：
+
+```kotlin
 package com.palettemuse.core
 
 import android.graphics.Bitmap
@@ -79,3 +89,22 @@ class ColorAnalyzer @Inject constructor() {
         return "#%06X".format(this and 0xFFFFFF)
     }
 }
+```
+
+- [ ] **Step 2: 验证编译**
+
+```bash
+./gradlew assembleDebug --no-daemon 2>&1 | tail -10
+```
+
+Expected: BUILD SUCCESSFUL
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add -A
+git commit -m "feat: add ColorAnalyzer with Palette API color extraction"
+```
+
+---
+
