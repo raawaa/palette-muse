@@ -1,3 +1,61 @@
+### Task 5.1: HomeScreen + HomeViewModel
+
+**Files:**
+- Modify: `app/src/main/java/com/palettemuse/ui/home/HomeScreen.kt`
+- Create: `app/src/main/java/com/palettemuse/ui/home/HomeViewModel.kt`
+
+- [ ] **Step 1: 实现 HomeViewModel**
+
+`app/src/main/java/com/palettemuse/ui/home/HomeViewModel.kt`：
+
+```kotlin
+package com.palettemuse.ui.home
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.palettemuse.data.model.ProjectEntity
+import com.palettemuse.data.repository.ProjectRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class HomeUiState(
+    val projects: List<ProjectEntity> = emptyList(),
+    val isLoading: Boolean = true
+)
+
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val projectRepository: ProjectRepository
+) : ViewModel() {
+
+    private val _uiState = MutableStateFlow(HomeUiState())
+    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            projectRepository.getAllProjects().collect { projects ->
+                _uiState.value = HomeUiState(projects = projects, isLoading = false)
+            }
+        }
+    }
+
+    fun deleteProject(projectId: String) {
+        viewModelScope.launch {
+            projectRepository.deleteProject(projectId)
+        }
+    }
+}
+```
+
+- [ ] **Step 2: 实现 HomeScreen**
+
+`app/src/main/java/com/palettemuse/ui/home/HomeScreen.kt`：
+
+```kotlin
 package com.palettemuse.ui.home
 
 import android.graphics.BitmapFactory
@@ -200,3 +258,22 @@ private fun ProjectCard(
         }
     }
 }
+```
+
+- [ ] **Step 3: 验证编译**
+
+```bash
+./gradlew assembleDebug --no-daemon 2>&1 | tail -15
+```
+
+Expected: BUILD SUCCESSFUL
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "feat: add HomeScreen with project gallery grid and empty state"
+```
+
+---
+
