@@ -1,4 +1,4 @@
-package com.example.palettemuse.data
+package com.palettemuse.data
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow

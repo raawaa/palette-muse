@@ -1,4 +1,4 @@
-package com.example.palettemuse.ui.main
+package com.palettemuse.ui.main
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
@@ -9,8 +9,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation3.runtime.NavKey
-import com.example.palettemuse.data.DefaultDataRepository
-import com.example.palettemuse.theme.PaletteMuseTheme
+import com.palettemuse.data.DefaultDataRepository
+import com.palettemuse.theme.PaletteMuseTheme
 
 @Composable
 fun MainScreen(

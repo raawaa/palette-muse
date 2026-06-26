@@ -2,14 +2,16 @@ plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.compose.compiler)
   alias(libs.plugins.kotlin.serialization)
+  alias(libs.plugins.hilt.android)
+  alias(libs.plugins.ksp)
 }
 
 android {
-    namespace = "com.example.palettemuse"
+    namespace = "com.palettemuse"
     compileSdk = 36
     defaultConfig {
-        applicationId = "com.example.palettemuse"
-        minSdk = 24
+        applicationId = "com.palettemuse"
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -81,4 +83,27 @@ dependencies {
   implementation(libs.androidx.navigation3.ui)
   implementation(libs.androidx.navigation3.runtime)
   implementation(libs.androidx.lifecycle.viewmodel.navigation3)
+
+  // ===== Palette Muse specific =====
+  // Hilt
+  implementation(libs.hilt.android)
+  ksp(libs.hilt.compiler)
+  implementation(libs.hilt.navigation.compose)
+
+  // Room
+  implementation(libs.room.runtime)
+  implementation(libs.room.ktx)
+  ksp(libs.room.compiler)
+
+  // CameraX
+  implementation(libs.camerax.core)
+  implementation(libs.camerax.camera2)
+  implementation(libs.camerax.lifecycle)
+  implementation(libs.camerax.view)
+
+  // Palette
+  implementation(libs.palette.ktx)
+
+  // Coil
+  implementation(libs.coil.compose)
 }

@@ -1,9 +1,9 @@
-package com.example.palettemuse.ui.main
+package com.palettemuse.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.palettemuse.data.DataRepository
-import com.example.palettemuse.ui.main.MainScreenUiState.Success
+import com.palettemuse.data.DataRepository
+import com.palettemuse.ui.main.MainScreenUiState.Success
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch

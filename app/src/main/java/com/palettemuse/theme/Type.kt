@@ -1,4 +1,4 @@
-package com.example.palettemuse.theme
+package com.palettemuse.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle

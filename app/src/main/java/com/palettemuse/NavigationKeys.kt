@@ -1,4 +1,4 @@
-package com.example.palettemuse
+package com.palettemuse
 
 import androidx.navigation3.runtime.NavKey
 import kotlinx.serialization.Serializable

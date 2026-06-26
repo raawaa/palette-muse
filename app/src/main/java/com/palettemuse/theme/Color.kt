@@ -1,4 +1,4 @@
-package com.example.palettemuse.theme
+package com.palettemuse.theme
 
 import androidx.compose.ui.graphics.Color
 
