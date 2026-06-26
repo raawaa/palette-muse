@@ -1,3 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Palette Muse</string>
+    <string name="home_title">我的作品集</string>
+    <string name="capture_title">色彩捕捉</string>
+    <string name="analyze_title">穿搭色彩分析</string>
+    <string name="export_title">海报导出</string>
+    <string name="empty_gallery">拍摄你的第一个色彩灵感</string>
+    <string name="share">共享</string>
+    <string name="save_poster">保存海报</string>
 </resources>
