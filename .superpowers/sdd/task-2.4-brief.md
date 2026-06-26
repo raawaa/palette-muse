@@ -1,3 +1,13 @@
+### Task 2.4: PosterRenderer — 海报合成
+
+**Files:**
+- Create: `app/src/main/java/com/palettemuse/core/PosterRenderer.kt`
+
+- [ ] **Step 1: 实现 PosterRenderer**
+
+`app/src/main/java/com/palettemuse/core/PosterRenderer.kt`：
+
+```kotlin
 package com.palettemuse.core
 
 import android.content.ContentValues
@@ -125,3 +135,24 @@ class PosterRenderer @Inject constructor() {
         }
     }
 }
+```
+
+- [ ] **Step 2: 验证编译**
+
+```bash
+./gradlew assembleDebug --no-daemon 2>&1 | tail -10
+```
+
+Expected: BUILD SUCCESSFUL
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add -A
+git commit -m "feat: add PosterRenderer with Canvas poster compositing and gallery save"
+```
+
+---
+
+## Phase 3: 相机模块
+
