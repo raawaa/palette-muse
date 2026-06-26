@@ -1,6 +1,17 @@
+### Task 2.3: ColorMatcher — 实时色彩匹配
+
+**Files:**
+- Create: `app/src/main/java/com/palettemuse/core/ColorMatcher.kt`
+
+- [ ] **Step 1: 实现 ColorMatcher**
+
+`app/src/main/java/com/palettemuse/core/ColorMatcher.kt`：
+
+```kotlin
 package com.palettemuse.core
 
 import android.graphics.Color
+import kotlin.math.abs
 import kotlin.math.sqrt
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -93,3 +104,22 @@ class ColorMatcher @Inject constructor() {
         else (903.3 * t + 16) / 116.0
     }
 }
+```
+
+- [ ] **Step 2: 验证编译**
+
+```bash
+./gradlew assembleDebug --no-daemon 2>&1 | tail -10
+```
+
+Expected: BUILD SUCCESSFUL
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add -A
+git commit -m "feat: add ColorMatcher with CIELAB delta-E color matching"
+```
+
+---
+
