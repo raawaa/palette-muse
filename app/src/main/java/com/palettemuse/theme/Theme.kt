@@ -1,50 +1,71 @@
 package com.palettemuse.theme
 
-import android.os.Build
+import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(primary = Purple80, secondary = PurpleGrey80, tertiary = Pink80)
+// Rose Gold / Aura Aesthetic palette
+val RoseGold = Color(0xFFB76E79)
+val RoseGoldDark = Color(0xFF8A4853)
+val SoftLavender = Color(0xFFE6E6FA)
+val PearlWhite = Color(0xFFFDFBF7)
+val InkBlack = Color(0xFF1A1A1A)
+val WarmGray = Color(0xFF524345)
+val OffWhite = Color(0xFFFCF9F8)
+val SurfaceDim = Color(0xFFDCD9D9)
+val SurfaceLow = Color(0xFFF6F3F2)
+val SurfaceContainer = Color(0xFFF0EDED)
 
-private val LightColorScheme =
-  lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40,
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+private val LightColorScheme = lightColorScheme(
+    primary = RoseGold,
     onPrimary = Color.White,
-    onSecondary = Color.White,
+    primaryContainer = RoseGoldDark,
+    onPrimaryContainer = Color.White,
+    secondary = SoftLavender,
+    onSecondary = InkBlack,
+    secondaryContainer = SoftLavender,
+    onSecondaryContainer = Color(0xFF626374),
+    tertiary = Color(0xFF5C5C59),
     onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-  )
+    background = PearlWhite,
+    onBackground = InkBlack,
+    surface = PearlWhite,
+    onSurface = InkBlack,
+    surfaceVariant = OffWhite,
+    onSurfaceVariant = WarmGray,
+    outline = Color(0xFF857374),
+    outlineVariant = Color(0xFFD7C1C3),
+    error = Color(0xFFBA1A1A),
+    onError = Color.White,
+    inverseSurface = Color(0xFF313030),
+    inverseOnSurface = Color(0xFFF3F0EF),
+)
 
 @Composable
 fun PaletteMuseTheme(
-  darkTheme: Boolean = isSystemInDarkTheme(),
-  // Dynamic color is available on Android 12+
-  dynamicColor: Boolean = true,
-  content: @Composable () -> Unit,
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit
 ) {
-  val colorScheme =
-    when {
-      dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-        val context = LocalContext.current
-        if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-      }
-      darkTheme -> DarkColorScheme
-      else -> LightColorScheme
+    val colorScheme = LightColorScheme
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.surface.toArgb()
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+        }
     }
 
-  MaterialTheme(colorScheme = colorScheme, typography = Typography, content = content)
+    MaterialTheme(
+        colorScheme = colorScheme,
+        typography = Typography,
+        content = content
+    )
 }
