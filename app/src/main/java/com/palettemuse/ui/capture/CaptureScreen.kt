@@ -2,54 +2,59 @@ package com.palettemuse.ui.capture
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Cameraswitch
-import androidx.compose.material.icons.filled.Tune
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LargeFloatingActionButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -57,11 +62,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.palettemuse.camera.CameraManager
 import com.palettemuse.theme.Dimens
+import com.palettemuse.theme.RoseGold
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CaptureScreen(
     onNavigateToAnalyze: (String) -> Unit,
@@ -71,8 +75,6 @@ fun CaptureScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var hasCameraPermission by remember { mutableStateOf(false) }
-    // Lifted camera manager reference so the FAB can access it for takePhoto
-    var cameraManager by remember { mutableStateOf(CameraManager()) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -87,164 +89,320 @@ fun CaptureScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "目标: ${uiState.targetColorName}",
-                        fontWeight = FontWeight.SemiBold
-                    )
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.White.copy(alpha = 0.6f)
-                ),
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "返回")
-                    }
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFCF9F8))) {
+        // === Layer 1: Camera viewfinder ===
+        if (hasCameraPermission) {
+            CameraPreview(
+                cameraManager = remember { CameraManager() },
+                lensFacing = uiState.lensFacing,
+                onFrameAnalyzed = { pixels, width, height ->
+                    viewModel.onFrameAnalyzed(pixels, width, height)
                 }
             )
-        },
-        floatingActionButton = {
-            LargeFloatingActionButton(
-                onClick = {
-                    cameraManager.takePhoto(
-                        context = context,
-                        onPhotoTaken = { bitmap ->
-                            viewModel.capturePhoto(bitmap) { projectId ->
-                                onNavigateToAnalyze(projectId)
-                            }
-                        },
-                        onError = { /* todo: show error snackbar */ }
-                    )
-                },
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary
+        } else {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
             ) {
-                if (uiState.isAnalyzing) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary)
-                } else {
-                    Text("📸", fontSize = 28.sp)
-                }
+                Text("需要相机权限", color = Color.Gray)
             }
         }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Camera preview
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            ) {
-                if (hasCameraPermission) {
-                    // key() ensures CameraPreview is fully torn down and recreated
-                    // when lens facing changes, so a new CameraManager starts with
-                    // the correct facing
-                    key(uiState.lensFacing) {
-                        val cm = remember { CameraManager() }
-                        // Sync the composable-scoped manager to the lift variable
-                        SideEffect { cameraManager = cm }
-                        CameraPreview(
-                            cameraManager = cm,
-                            lensFacing = uiState.lensFacing,
-                            onFrameAnalyzed = { pixels, width, height ->
-                                viewModel.onFrameAnalyzed(pixels, width, height)
-                            }
-                        )
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("需要相机权限", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
 
-                // Match percentage overlay with glassmorphism
+        // === Layer 2: Viewfinder crosshair + pulsing ring ===
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            // Outer dim overlay (simulated via crosshair box-shadow equivalent)
+            CrosshairView()
+        }
+
+        // === Layer 3: Top glass bar — close / target pill / flash ===
+        Box(
+            modifier = Modifier.fillMaxWidth().padding(top = 20.dp).padding(horizontal = 20.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Close button
+                GlassCircleButton(text = "close", onClick = onBack)
+
+                // Target color pill
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = Dimens.stackMd)
-                        .background(
-                            MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
-                            RoundedCornerShape(Dimens.chipCorner)
-                        )
-                        .padding(horizontal = Dimens.stackMd, vertical = Dimens.stackSm)
+                        .clip(RoundedCornerShape(9999.dp))
+                        .background(Color.White.copy(alpha = 0.6f))
+                        .border(0.5.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(9999.dp))
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
-                    Text(
-                        text = "${uiState.matchPercentage}% MATCH",
-                        color = MaterialTheme.colorScheme.onSurface,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                }
-
-                // Camera controls
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(Dimens.stackMd)
-                        .fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = { /* tune */ }) {
-                        Icon(Icons.Default.Tune, "微调", tint = Color.White)
-                    }
-
-                    Spacer(modifier = Modifier.width(48.dp))
-
-                    IconButton(onClick = { viewModel.flipCamera() }) {
-                        Icon(Icons.Default.Cameraswitch, "翻转", tint = Color.White)
-                    }
-                }
-            }
-
-            // Captured swatches
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(Dimens.stackMd)
-            ) {
-                Text(
-                    text = "已捕捉 (${uiState.capturedSwatches.size})",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(Dimens.stackSm))
-
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.gutter)
-                ) {
-                    uiState.capturedSwatches.forEach { swatch ->
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(android.graphics.Color.parseColor(swatch.hexColor)))
-                                    .border(2.dp, MaterialTheme.colorScheme.surface, CircleShape)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Column {
                             Text(
-                                text = "${swatch.matchPercentage}%",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = "TARGET",
+                                fontSize = 10.sp,
+                                letterSpacing = 1.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF524345)
+                            )
+                            Text(
+                                text = uiState.targetColorName,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = RoseGold
                             )
                         }
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                                .background(Color(android.graphics.Color.parseColor(uiState.targetColor)))
+                        )
                     }
+                }
+
+                // Flash button
+                GlassCircleButton(text = "flash_on", onClick = {})
+            }
+        }
+
+        // === Layer 4: Live match percentage ===
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .offset(y = (-80).dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.6f))
+                    .border(0.5.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("🎨", fontSize = 18.sp)
+                    Text(
+                        text = "${uiState.matchPercentage}% Match",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = RoseGold
+                    )
                 }
             }
         }
+
+        // === Layer 5: Bottom gradient overlay ===
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.45f)
+                .align(Alignment.BottomCenter)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color(0xFFFCF9F8).copy(alpha = 0.5f),
+                            Color(0xFFFCF9F8)
+                        ),
+                        startY = 0f,
+                        endY = Float.POSITIVE_INFINITY
+                    )
+                )
+        )
+
+        // === Layer 6: Bottom controls ===
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 24.dp)
+        ) {
+            // Captured gallery
+            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "CAPTURED (${uiState.capturedSwatches.size})",
+                        fontSize = 10.sp,
+                        letterSpacing = 1.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF524345)
+                    )
+                    Text(
+                        text = "View All",
+                        fontSize = 14.sp,
+                        color = RoseGold,
+                        modifier = Modifier.clickable { }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    uiState.capturedSwatches.forEach { swatch ->
+                        Box(
+                            modifier = Modifier
+                                .size(width = 80.dp, height = 96.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color(android.graphics.Color.parseColor(swatch.hexColor)))
+                                .border(
+                                    0.5.dp,
+                                    Color(0xFFD7C1C3).copy(alpha = 0.3f),
+                                    RoundedCornerShape(12.dp)
+                                )
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(4.dp)
+                                    .background(
+                                        Color.White.copy(alpha = 0.8f),
+                                        RoundedCornerShape(4.dp)
+                                    )
+                                    .padding(horizontal = 4.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${swatch.matchPercentage}%",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = RoseGold
+                                )
+                            }
+                        }
+                    }
+
+                    // Add placeholder
+                    Box(
+                        modifier = Modifier
+                            .size(width = 80.dp, height = 96.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(
+                                2.dp,
+                                Color(0xFFD7C1C3).copy(alpha = 0.5f),
+                                RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("+", fontSize = 24.sp, color = Color(0xFFD7C1C3))
+                    }
+                }
+            }
+
+            // Shutter controls
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                GlassCircleButton(text = "flip_camera_ios", onClick = { viewModel.flipCamera() })
+
+                // Main shutter button
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.2f))
+                        .padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(
+                                Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0xFFA6606B),
+                                        Color(0xFFFFB2BC)
+                                    )
+                                )
+                            )
+                    )
+                }
+
+                GlassCircleButton(text = "tune", onClick = {})
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlassCircleButton(text: String, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(48.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.6f))
+            .border(0.5.dp, Color.White.copy(alpha = 0.8f), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, fontSize = 20.sp, color = Color(0xFF1C1B1B))
+    }
+}
+
+@Composable
+private fun CrosshairView() {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "pulse_alpha"
+    )
+
+    Canvas(modifier = Modifier.size(140.dp)) {
+        val cx = size.width / 2
+        val cy = size.height / 2
+
+        // Outer dim overlay
+        drawCircle(
+            color = Color.Black.copy(alpha = 0.1f),
+            radius = size.width / 2
+        )
+
+        // Circle outline
+        drawCircle(
+            color = Color.White.copy(alpha = 0.4f),
+            radius = size.width / 2 - 10f,
+            style = Stroke(width = 2f)
+        )
+
+        // Pulsing ring
+        drawCircle(
+            color = RoseGold.copy(alpha = pulseAlpha),
+            radius = size.width / 2 - 8f,
+            style = Stroke(width = 3f)
+        )
+
+        // Crosshair horizontal
+        drawLine(
+            color = Color.White.copy(alpha = 0.6f),
+            start = androidx.compose.ui.geometry.Offset(cx - 60f, cy),
+            end = androidx.compose.ui.geometry.Offset(cx + 60f, cy),
+            strokeWidth = 1f
+        )
+
+        // Crosshair vertical
+        drawLine(
+            color = Color.White.copy(alpha = 0.6f),
+            start = androidx.compose.ui.geometry.Offset(cx, cy - 60f),
+            end = androidx.compose.ui.geometry.Offset(cx, cy + 60f),
+            strokeWidth = 1f
+        )
     }
 }
 
