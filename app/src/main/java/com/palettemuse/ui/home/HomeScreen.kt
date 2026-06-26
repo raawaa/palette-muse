@@ -1,41 +1,34 @@
 package com.palettemuse.ui.home
 
 import android.graphics.BitmapFactory
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
-import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
-import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeFloatingActionButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -43,11 +36,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,9 +48,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.palettemuse.data.model.ProjectEntity
 import com.palettemuse.theme.Dimens
-import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.PlayfairDisplay
 import com.palettemuse.theme.PlusJakartaSans
+import com.palettemuse.theme.RoseGold
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -72,13 +65,11 @@ fun HomeScreen(
 
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFCF9F8))) {
         if (uiState.isLoading) {
-            // Loading state
+            // loading
         } else if (uiState.projects.isEmpty()) {
-            // === Empty state ===
+            // ===== Empty state =====
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 20.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(120.dp))
@@ -92,15 +83,16 @@ fun HomeScreen(
                     color = RoseGold
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "拍摄你的第一个色彩灵感",
-                    color = Color(0xFF524345),
-                    fontSize = 16.sp
-                )
+                Text("拍摄你的第一个色彩灵感", color = Color(0xFF524345), fontSize = 16.sp)
             }
 
-            // FAB (raised above bottom nav bar)
-            Box(modifier = Modifier.fillMaxSize().padding(start=20.dp, end=20.dp, top=20.dp, bottom=100.dp), contentAlignment = Alignment.BottomEnd) {
+            // FAB
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 100.dp),
+                contentAlignment = Alignment.BottomEnd
+            ) {
                 LargeFloatingActionButton(
                     onClick = onNavigateToCapture,
                     shape = RoundedCornerShape(Dimens.pillShape),
@@ -110,47 +102,40 @@ fun HomeScreen(
                 }
             }
         } else {
-            // === Main content with scroll ===
+            // ===== Main content =====
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp)
             ) {
-                // ===== TopAppBar (in-content, no Scaffold) =====
+                // ===== TopAppBar =====
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        tint = Color(0xFF524345)
-                    )
+                    Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color(0xFF524345))
                     Text(
                         text = "ChromaMuse",
                         fontFamily = PlayfairDisplay,
                         fontWeight = FontWeight.Bold,
+                        fontStyle = FontStyle.Italic,
                         fontSize = 28.sp,
                         color = RoseGold,
                         letterSpacing = (-0.5).sp
                     )
-                    Icon(
-                        Icons.Default.AccountCircle,
-                        contentDescription = "Account",
-                        tint = Color(0xFF524345)
-                    )
+                    Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color(0xFF524345))
                 }
 
-                // ===== Today's Inspiration =====
+                // ===== My Color Diary =====
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Today's Inspiration",
+                        text = "My Color Diary",
                         fontFamily = PlusJakartaSans,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 18.sp,
@@ -167,7 +152,8 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Hero card
+                // ===== Hero card =====
+                val heroProject = uiState.projects.firstOrNull()
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -175,8 +161,6 @@ fun HomeScreen(
                         .clip(RoundedCornerShape(28.dp))
                         .background(Color(0xFFF0EDED))
                 ) {
-                    // Latest project image as hero (or placeholder)
-                    val heroProject = uiState.projects.firstOrNull()
                     if (heroProject != null) {
                         val bitmap = BitmapFactory.decodeFile(heroProject.imagePath)
                         if (bitmap != null) {
@@ -195,21 +179,15 @@ fun HomeScreen(
                             .fillMaxSize()
                             .background(
                                 Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color(0xFFDCD9D9).copy(alpha = 0.4f)
-                                    )
+                                    colors = listOf(Color.Transparent, Color(0xFFDCD9D9).copy(alpha = 0.4f))
                                 )
                             )
                     )
 
                     // Bottom content
                     Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(24.dp)
+                        modifier = Modifier.align(Alignment.BottomStart).padding(24.dp)
                     ) {
-                        // Tag pill
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(9999.dp))
@@ -225,9 +203,7 @@ fun HomeScreen(
                                 color = Color(0xFF1C1B1B)
                             )
                         }
-
                         Spacer(modifier = Modifier.height(8.dp))
-
                         Text(
                             text = if (heroProject != null) "Captured with Palette Muse" else "Start your color journey",
                             fontSize = 16.sp,
@@ -239,32 +215,30 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(32.dp))
 
-                // ===== Discover Palettes =====
+                // ===== Recent Captures =====
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Discover Palettes",
+                        text = "Recent Captures",
                         fontFamily = PlusJakartaSans,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 18.sp,
                         color = Color(0xFF1C1B1B)
                     )
-                    Icon(
-                        Icons.Default.Tune,
-                        contentDescription = "Filter",
-                        tint = Color(0xFF5C5D6E)
-                    )
+                    Icon(Icons.Default.Tune, contentDescription = "Filter", tint = Color(0xFF5C5D6E))
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // Staggered 2-column grid
+                // ===== Staggered 2-column grid =====
                 val projects = uiState.projects
-                val column1 = projects.filterIndexed { index, _ -> index % 2 == 0 }
-                val column2 = projects.filterIndexed { index, _ -> index % 2 == 1 }
+                val column1 = projects.filterIndexed { i, _ -> i % 2 == 0 }
+                val column2 = projects.filterIndexed { i, _ -> i % 2 == 1 }
+
+                val sdf = SimpleDateFormat("MMM dd, yyyy", Locale.US)
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -276,11 +250,7 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(32.dp)
                     ) {
                         column1.forEach { project ->
-                            PaletteCard(
-                                project = project,
-                                onClick = { onNavigateToAnalyze(project.id) },
-                                heights = listOf(280, 360)
-                            )
+                            PaletteCard(project = project, date = sdf.format(Date(project.createdAt)), height = 280, onClick = { onNavigateToAnalyze(project.id) })
                         }
                     }
 
@@ -290,11 +260,8 @@ fun HomeScreen(
                         verticalArrangement = Arrangement.spacedBy(32.dp)
                     ) {
                         column2.forEachIndexed { index, project ->
-                            PaletteCard(
-                                project = project,
-                                onClick = { onNavigateToAnalyze(project.id) },
-                                heights = listOf(320, 260)
-                            )
+                            val h = if (index % 2 == 0) 320 else 260
+                            PaletteCard(project = project, date = sdf.format(Date(project.createdAt)), height = h, onClick = { onNavigateToAnalyze(project.id) })
                         }
                     }
                 }
@@ -334,58 +301,25 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.SpaceAround,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Home (active)
+                // Home (active, filled)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.Home,
-                        contentDescription = "Home",
-                        tint = RoseGold,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        "home",
-                        fontSize = 10.sp,
-                        letterSpacing = 1.sp,
-                        color = RoseGold,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Icon(Icons.Default.Home, contentDescription = "Home", tint = RoseGold, modifier = Modifier.size(24.dp))
+                    Text("home", fontSize = 10.sp, letterSpacing = 1.sp, color = RoseGold, fontWeight = FontWeight.Bold)
                 }
 
-                // Camera
+                // Camera (inactive)
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.clickable { onNavigateToCapture() }
                 ) {
-                    Icon(
-                        Icons.Default.PhotoCamera,
-                        contentDescription = "Camera",
-                        tint = Color(0xFF5C5D6E).copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        "photo_camera",
-                        fontSize = 10.sp,
-                        letterSpacing = 1.sp,
-                        color = Color(0xFF5C5D6E).copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Bold
-                    )
+                    Icon(Icons.Default.PhotoCamera, contentDescription = "Camera", tint = Color(0xFF5C5D6E).copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
+                    Text("photo_camera", fontSize = 10.sp, letterSpacing = 1.sp, color = Color(0xFF5C5D6E).copy(alpha = 0.6f), fontWeight = FontWeight.Bold)
                 }
 
-                // Profile
+                // Profile (inactive)
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Default.Person,
-                        contentDescription = "Profile",
-                        tint = Color(0xFF5C5D6E).copy(alpha = 0.6f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Text(
-                        "person",
-                        fontSize = 10.sp,
-                        letterSpacing = 1.sp,
-                        color = Color(0xFF5C5D6E).copy(alpha = 0.6f),
-                        fontWeight = FontWeight.Bold
-                    )
+                    Icon(Icons.Default.Person, contentDescription = "Profile", tint = Color(0xFF5C5D6E).copy(alpha = 0.6f), modifier = Modifier.size(24.dp))
+                    Text("person", fontSize = 10.sp, letterSpacing = 1.sp, color = Color(0xFF5C5D6E).copy(alpha = 0.6f), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -395,18 +329,17 @@ fun HomeScreen(
 @Composable
 private fun PaletteCard(
     project: ProjectEntity,
-    onClick: () -> Unit,
-    heights: List<Int>
+    date: String,
+    height: Int,
+    onClick: () -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(heights[project.hashCode().mod(heights.size)].dp)
+                .height(height.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(Color(0xFFF0EDED))
         ) {
@@ -420,10 +353,10 @@ private fun PaletteCard(
                 )
             }
 
-            // Palette circles overlay
+            // Palette circles at bottom-left
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
+                    .align(Alignment.BottomStart)
                     .padding(12.dp)
                     .clip(RoundedCornerShape(9999.dp))
                     .background(Color.White.copy(alpha = 0.5f))
@@ -433,9 +366,9 @@ private fun PaletteCard(
                     listOf("#F5F2EB", "#D1BCAE", "#8C7A72").forEach { hex ->
                         Box(
                             modifier = Modifier
-                                .size(20.dp)
-                                .border(1.dp, Color.White, RoundedCornerShape(9999.dp))
-                                .background(Color(android.graphics.Color.parseColor(hex)), RoundedCornerShape(9999.dp))
+                                .size(16.dp)
+                                .border(1.dp, Color.White, CircleShape)
+                                .background(Color(android.graphics.Color.parseColor(hex)), CircleShape)
                         )
                     }
                 }
@@ -449,14 +382,19 @@ private fun PaletteCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Box(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = project.title,
+                    fontSize = 14.sp,
+                    color = Color(0xFF5C5D6E),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             Text(
-                text = project.title,
-                fontSize = 14.sp,
-                color = Color(0xFF5C5D6E),
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
+                text = date,
+                fontSize = 12.sp,
+                color = Color(0xFF5C5D6E)
             )
         }
     }
