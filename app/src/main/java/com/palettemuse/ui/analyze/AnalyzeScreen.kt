@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -185,11 +187,11 @@ fun AnalyzeScreen(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
-                    Text(
-                        text = "开始色彩探索 →",
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        fontSize = 16.sp
-                    )
+                    Icon(Icons.Default.Palette, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(Dimens.stackSm))
+                    Text(text = "开始色彩探索", fontSize = 16.sp)
+                    Spacer(modifier = Modifier.width(Dimens.stackSm))
+                    Icon(Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(20.dp))
                 }
             }
         }

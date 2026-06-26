@@ -5,16 +5,21 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -42,6 +47,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.palettemuse.theme.Dimens
+import com.palettemuse.theme.PlayfairDisplay
 import com.palettemuse.theme.SuccessGreen
 import java.io.File
 
@@ -103,8 +109,9 @@ fun ExportScreen(
 
                 Text(
                     text = "Moodboard Color Harmony",
+                    fontFamily = PlayfairDisplay,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 20.sp,
+                    fontSize = 24.sp,
                     textAlign = TextAlign.Center
                 )
 
@@ -128,7 +135,9 @@ fun ExportScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(Dimens.buttonCorner)
                 ) {
-                    Text("📤 共享", modifier = Modifier.padding(vertical = 4.dp), fontSize = 16.sp)
+                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(Dimens.stackSm))
+                    Text("共享", fontSize = 16.sp)
                 }
 
                 Spacer(modifier = Modifier.height(Dimens.gutter))
@@ -139,11 +148,9 @@ fun ExportScreen(
                     shape = RoundedCornerShape(Dimens.buttonCorner),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                 ) {
-                    Text(
-                        "💾 保存海报",
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        fontSize = 16.sp
-                    )
+                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(20.dp), tint = Color.White)
+                    Spacer(modifier = Modifier.width(Dimens.stackSm))
+                    Text("保存海报", color = Color.White, fontSize = 16.sp)
                 }
 
                 if (uiState.exportSuccess) {
