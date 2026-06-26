@@ -99,8 +99,8 @@ fun HomeScreen(
                 )
             }
 
-            // FAB
-            Box(modifier = Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.BottomEnd) {
+            // FAB (raised above bottom nav bar)
+            Box(modifier = Modifier.fillMaxSize().padding(start=20.dp, end=20.dp, top=20.dp, bottom=100.dp), contentAlignment = Alignment.BottomEnd) {
                 LargeFloatingActionButton(
                     onClick = onNavigateToCapture,
                     shape = RoundedCornerShape(Dimens.pillShape),
