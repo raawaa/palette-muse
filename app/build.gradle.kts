@@ -105,6 +105,9 @@ dependencies {
   // Palette
   implementation(libs.palette.ktx)
 
+  // Lottie
+  implementation(libs.lottie.compose)
+
   // Coil
   implementation(libs.coil.compose)
 }

@@ -47,6 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.palettemuse.data.model.ProjectEntity
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.palettemuse.R
 import com.palettemuse.theme.Dimens
 import com.palettemuse.theme.PlayfairDisplay
 import com.palettemuse.theme.PlusJakartaSans
@@ -125,8 +129,9 @@ fun HomeScreen(
                         .background(Color(0xFFF0EDED)),
                     contentAlignment = Alignment.Center
                 ) {
+                    val cameraAnim by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.camera))
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("🎨", fontSize = 64.sp)
+                        LottieAnimation(composition = cameraAnim, modifier = Modifier.size(120.dp))
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
                             text = "Start your color journey",
