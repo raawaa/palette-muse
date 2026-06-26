@@ -1,3 +1,75 @@
+### Task 4.1: AnalyzeScreen + ViewModel
+
+**Files:**
+- Modify: `app/src/main/java/com/palettemuse/ui/analyze/AnalyzeScreen.kt`
+- Create: `app/src/main/java/com/palettemuse/ui/analyze/AnalyzeViewModel.kt`
+
+- [ ] **Step 1: 实现 AnalyzeViewModel**
+
+`app/src/main/java/com/palettemuse/ui/analyze/AnalyzeViewModel.kt`：
+
+```kotlin
+package com.palettemuse.ui.analyze
+
+import android.graphics.BitmapFactory
+import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.palettemuse.data.model.ColorPaletteEntity
+import com.palettemuse.data.model.ProjectEntity
+import com.palettemuse.data.repository.ProjectRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+data class AnalyzeUiState(
+    val project: ProjectEntity? = null,
+    val palettes: List<ColorPaletteEntity> = emptyList(),
+    val isLoading: Boolean = true,
+    val error: String? = null
+)
+
+@HiltViewModel
+class AnalyzeViewModel @Inject constructor(
+    savedStateHandle: SavedStateHandle,
+    private val projectRepository: ProjectRepository
+) : ViewModel() {
+
+    private val projectId: String = savedStateHandle.get<String>("projectId") ?: ""
+
+    private val _uiState = MutableStateFlow(AnalyzeUiState())
+    val uiState: StateFlow<AnalyzeUiState> = _uiState.asStateFlow()
+
+    init {
+        loadProject()
+    }
+
+    private fun loadProject() {
+        viewModelScope.launch {
+            try {
+                val project = projectRepository.getProject(projectId)
+                val palettes = projectRepository.getPalettesForProject(projectId)
+                _uiState.value = AnalyzeUiState(
+                    project = project,
+                    palettes = palettes,
+                    isLoading = false
+                )
+            } catch (e: Exception) {
+                _uiState.value = AnalyzeUiState(isLoading = false, error = e.message)
+            }
+        }
+    }
+}
+```
+
+- [ ] **Step 2: 实现 AnalyzeScreen**
+
+`app/src/main/java/com/palettemuse/ui/analyze/AnalyzeScreen.kt`：
+
+```kotlin
 package com.palettemuse.ui.analyze
 
 import android.graphics.BitmapFactory
@@ -13,7 +85,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -189,3 +260,24 @@ fun AnalyzeScreen(
         }
     }
 }
+```
+
+- [ ] **Step 3: 验证编译**
+
+```bash
+./gradlew assembleDebug --no-daemon 2>&1 | tail -15
+```
+
+Expected: BUILD SUCCESSFUL
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add -A
+git commit -m "feat: add AnalyzeScreen with photo view, color palette display, and semantic naming"
+```
+
+---
+
+## Phase 5: 作品集与导出
+
