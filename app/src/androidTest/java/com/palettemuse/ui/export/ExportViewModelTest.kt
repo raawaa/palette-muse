@@ -1,6 +1,7 @@
 package com.palettemuse.ui.export
 
 import android.content.Context
+import android.graphics.Bitmap
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -11,6 +12,7 @@ import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.ui.navigation.Routes
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -22,6 +24,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -104,5 +107,23 @@ class ExportViewModelTest {
         vm.selectTemplate(PosterRenderer.TemplateType.MINIMAL)
         advanceUntilIdle()
         assertEquals(PosterRenderer.TemplateType.MINIMAL, vm.uiState.value.selectedTemplate)
+    }
+
+    @Test
+    fun sharePoster_generatesTemporaryFile() = runTest(dispatcher) {
+        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
+        advanceUntilIdle()
+        val bmp = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+        vm.setPreviewBitmapForTest(bmp)
+        vm.sharePoster(context)
+        // sharePoster writes the file on Dispatchers.IO (real thread) then tries to
+        // show a ShareSheet outside an Activity context, which throws.  The
+        // try/catch inside sharePoster catches that and sets error="分享失败".
+        // Wait for that error so we know the coroutine finished.
+        val errorState = vm.uiState.first { it.error != null }
+        assertEquals("分享失败", errorState.error)
+        val file = File(context.cacheDir, "poster_share.png")
+        assertTrue(file.exists() && file.length() > 0)
     }
 }

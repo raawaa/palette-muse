@@ -180,22 +180,27 @@ class ExportViewModel @AssistedInject constructor(
     fun sharePoster(context: Context) {
         val bitmap = _uiState.value.previewBitmap ?: return
         viewModelScope.launch {
-            val uri = withContext(Dispatchers.IO) {
-                runCatching {
+            try {
+                val uri = withContext(Dispatchers.IO) {
                     val file = File(context.cacheDir, "poster_share.png")
-                    file.outputStream().use {
-                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
-                    }
+                    file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
                     FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                }.getOrNull()
-            } ?: return@launch
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "image/png"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val intent = Intent(Intent.ACTION_SEND).apply {
+                    type = "image/png"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                context.startActivity(Intent.createChooser(intent, "分享到…"))
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(error = "分享失败")
             }
-            context.startActivity(Intent.createChooser(shareIntent, "分享海报"))
         }
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun setPreviewBitmapForTest(bmp: Bitmap) {
+        _uiState.value = _uiState.value.copy(previewBitmap = bmp)
     }
 
     /** Saves the current preview Bitmap to the gallery; flips [ExportUiState.exportSuccess]. */
