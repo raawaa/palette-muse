@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
+data class TargetState(val name: String, val matchPct: Int, val isFallback: Boolean)
+
 data class PendingCapture(
     val imagePath: String,
     val dominantHex: String,
@@ -25,7 +27,8 @@ data class CaptureUiState(
     val matchPercentage: Int = 0,
     val lensFacing: Int = CameraSelector.LENS_FACING_BACK,
     val isAnalyzing: Boolean = false,
-    val pendingCapture: PendingCapture? = null
+    val pendingCapture: PendingCapture? = null,
+    val targetTheme: TargetState = TargetState("Rose Gold", 0, isFallback = true)
 )
 
 @HiltViewModel
@@ -39,14 +42,29 @@ class CaptureViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CaptureUiState())
     val uiState: StateFlow<CaptureUiState> = _uiState.asStateFlow()
 
+    private val _themes = MutableStateFlow<List<ThemeEntity>>(emptyList())
+
+    init {
+        viewModelScope.launch {
+            themeRepository.getAllThemes().collect { _themes.value = it }
+        }
+    }
+
     fun onFrameAnalyzed(pixels: IntArray, width: Int, height: Int) {
         val sampleHex = colorMatcher.extractCenterAverageColor(pixels, width, height)
-        // TODO Plan 3: 实时匹配最接近的主题色 — inject ThemeRepository, cache themes as a
-        // StateFlow in init (avoid per-frame DB I/O on the analyzer thread), and pick the
-        // best-matching theme's representativeHex here. Also surface the matched theme name
-        // to CaptureScreen's TARGET pill (currently hardcoded "Rose Gold" / #B76E79).
+        val themes = _themes.value
+        val best = themes
+            .map { it to colorMatcher.matchPercentage(it.representativeHex, sampleHex) }
+            .filter { it.second >= THEME_MATCH_THRESHOLD }
+            .maxByOrNull { it.second }
+        val target = if (best != null) {
+            TargetState(best.first.name, best.second, isFallback = false)
+        } else {
+            TargetState("Rose Gold", 0, isFallback = true)
+        }
         _uiState.value = _uiState.value.copy(
-            matchPercentage = colorMatcher.matchPercentage("#B76E79", sampleHex)
+            targetTheme = target,
+            matchPercentage = target.matchPct
         )
     }
 
@@ -98,5 +116,9 @@ class CaptureViewModel @Inject constructor(
     @androidx.annotation.VisibleForTesting
     internal fun setPending(pending: PendingCapture) {
         _uiState.value = _uiState.value.copy(pendingCapture = pending)
+    }
+
+    companion object {
+        const val THEME_MATCH_THRESHOLD = 60
     }
 }

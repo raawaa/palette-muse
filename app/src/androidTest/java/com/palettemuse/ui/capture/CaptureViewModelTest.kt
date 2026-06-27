@@ -19,7 +19,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -83,5 +85,34 @@ class CaptureViewModelTest {
         advanceUntilIdle()
         assertEquals(2, db.themeDao().getAllThemes().first().size)
         assertNull(vm.uiState.value.pendingCapture)
+    }
+
+    @Test
+    fun onFrameAnalyzed_picksClosestTheme() = runTest(dispatcher) {
+        repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        advanceUntilIdle()  // drain init's themes collector before analyzing a frame
+        val pixels = IntArray(100) { 0xFFDCA8A6.toInt() }  // exact hex match
+        vm.onFrameAnalyzed(pixels, 10, 10)
+        advanceUntilIdle()
+        val target = vm.uiState.value.targetTheme
+        // Theme name comes from ColorNamer.hash(#DCA8A6) — assert behaviour, not label.
+        assertEquals(ColorNamer().nameColor("#DCA8A6"), target.name)
+        assertTrue(target.matchPct >= 60)
+        assertFalse(target.isFallback)
+    }
+
+    @Test
+    fun onFrameAnalyzed_fallbackRoseGoldWhenNoMatch() = runTest(dispatcher) {
+        repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        advanceUntilIdle()  // drain init's themes collector before analyzing a frame
+        val pixels = IntArray(100) { 0xFF00FF00.toInt() }  // 亮绿 vs Dusty Rose → 大 ΔE → fallback
+        vm.onFrameAnalyzed(pixels, 10, 10)
+        advanceUntilIdle()
+        val target = vm.uiState.value.targetTheme
+        assertTrue(target.isFallback)
+        assertEquals("Rose Gold", target.name)
+        assertEquals(0, target.matchPct)
     }
 }

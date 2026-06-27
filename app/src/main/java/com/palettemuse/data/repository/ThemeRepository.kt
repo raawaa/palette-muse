@@ -85,6 +85,13 @@ class ThemeRepository @Inject constructor(
         }
 
     /**
+     * Streams the raw theme entities (without photos) as they change.
+     * Used by CaptureViewModel to pick the closest-matching theme per camera frame
+     * without forcing a DB read on the analyzer thread.
+     */
+    fun getAllThemes(): Flow<List<ThemeEntity>> = themeDao.getAllThemes()
+
+    /**
      * Loads a single theme together with its photos and built palette.
      * Used by ThemeDetailScreen to render the palette header + Hero + masonry grid.
      * Returns null when the theme id does not exist.
