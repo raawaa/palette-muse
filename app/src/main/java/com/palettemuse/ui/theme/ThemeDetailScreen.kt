@@ -26,14 +26,17 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -75,6 +78,17 @@ import kotlinx.coroutines.launch
 private fun parseHex(hex: String): Color = runCatching {
     Color(android.graphics.Color.parseColor(hex))
 }.getOrDefault(RoseGold)
+
+/** Parses a hex string ("#RRGGBB") into an Int color, or null on failure. */
+private fun parseHexOrNull(hex: String): Int? = try {
+    android.graphics.Color.parseColor(hex)
+} catch (e: Exception) {
+    null
+}
+
+/** Parses a hex string into a Compose [Color], falling back to rose gold (#B76E79). */
+private fun parseHexOrRoseGold(hex: String): Color =
+    Color(parseHexOrNull(hex) ?: android.graphics.Color.parseColor("#B76E79"))
 
 /** Formats the theme's relative time as a Chinese label (今日更新 / 昨日 / N天前). */
 private fun relativeTimeLabel(epoch: Long): String {
@@ -167,6 +181,8 @@ private fun ThemeDetailContent(
     val gridPhotos = if (heroPhoto != null) photos.filter { it.id != heroPhoto.id } else photos
 
     var menuExpanded by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
+    var showColor by remember { mutableStateOf(false) }
 
     // Snackbar for "coming soon" hints on rename / recolor (data-destructive actions are deferred to Plan 3).
     val snackbarHostState = remember { SnackbarHostState() }
@@ -292,25 +308,21 @@ private fun ThemeDetailContent(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false }
                 ) {
-                    // Rename / recolor intentionally show a "coming soon" snackbar instead of
-                    // mutating data with placeholder values (Plan 3 will add real dialogs that
-                    // call onRename / onUpdateColor with user-provided input).
+                    // Rename / recolor now open AlertDialogs that call onRename / onUpdateColor
+                    // with the user-provided input (Plan 3 replaces the earlier "coming soon"
+                    // snackbar placeholders).
                     DropdownMenuItem(
                         text = { Text("重命名", fontFamily = PlusJakartaSans) },
                         onClick = {
                             menuExpanded = false
-                            scope.launch {
-                                snackbarHostState.showSnackbar("重命名功能即将推出")
-                            }
+                            showRename = true
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("改主题色", fontFamily = PlusJakartaSans) },
                         onClick = {
                             menuExpanded = false
-                            scope.launch {
-                                snackbarHostState.showSnackbar("改色功能即将推出")
-                            }
+                            showColor = true
                         }
                     )
                     DropdownMenuItem(
@@ -338,6 +350,22 @@ private fun ThemeDetailContent(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = Dimens.stackLg)
+        )
+    }
+
+    // ===== Rename / recolor dialogs (replace Plan 2 final-fix snackbar placeholders) =====
+    if (showRename) {
+        RenameDialog(
+            initial = state.theme.name,
+            onConfirm = { onRename(it); showRename = false },
+            onDismiss = { showRename = false }
+        )
+    }
+    if (showColor) {
+        EditColorDialog(
+            initial = state.theme.representativeHex,
+            onConfirm = { onUpdateColor(it); showColor = false },
+            onDismiss = { showColor = false }
         )
     }
 }
@@ -476,3 +504,77 @@ private fun ExportPill(
 // ===================================================================
 
 private fun fullLineSpan() = StaggeredGridItemSpan.FullLine
+
+// ===================================================================
+// RenameDialog — AlertDialog with OutlinedTextField for the theme name
+// ===================================================================
+
+@Composable
+fun RenameDialog(
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("重命名主题") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                label = { Text("主题名") }
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (text.isNotBlank()) onConfirm(text) },
+                enabled = text.isNotBlank()
+            ) { Text("确认") }
+        },
+        dismissButton = { TextButton(onDismiss) { Text("取消") } }
+    )
+}
+
+// ===================================================================
+// EditColorDialog — AlertDialog with hex preview swatch + Hex text field
+// ===================================================================
+
+@Composable
+fun EditColorDialog(
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var hex by remember { mutableStateOf(initial) }
+    val color = remember(hex) { parseHexOrRoseGold(hex) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("改主题色") },
+        text = {
+            Column {
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .background(color, CircleShape)
+                        .border(1.dp, Color.Gray, CircleShape)
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = hex,
+                    onValueChange = { hex = it },
+                    singleLine = true,
+                    label = { Text("Hex 颜色") }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (parseHexOrNull(hex) != null) onConfirm(hex) },
+                enabled = parseHexOrNull(hex) != null
+            ) { Text("确认") }
+        },
+        dismissButton = { TextButton(onDismiss) { Text("取消") } }
+    )
+}
