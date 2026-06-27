@@ -1,6 +1,5 @@
 package com.palettemuse.ui.export
 
-import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -49,7 +48,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.palettemuse.data.model.PhotoEntity
@@ -58,17 +56,14 @@ import com.palettemuse.theme.Dimens
 import com.palettemuse.theme.OnSurface
 import com.palettemuse.theme.OnSurfaceVariant
 import com.palettemuse.theme.OutlineVariant
-import com.palettemuse.theme.PearlWhite
 import com.palettemuse.theme.PlayfairDisplay
 import com.palettemuse.theme.PlusJakartaSans
 import com.palettemuse.theme.PrimaryDesign
 import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.RoseGoldDark
-import com.palettemuse.theme.SurfaceContainer
 import com.palettemuse.theme.SurfaceLow
 import com.palettemuse.theme.SurfaceWhite
 import com.palettemuse.theme.glassmorphicBackground
-import java.io.File
 
 // Aura Aesthetic color tokens are imported from theme/Color.kt — do not redefine here.
 
@@ -91,6 +86,14 @@ fun ExportScreen(
         uiState.unsupportedTemplateHint?.let { msg ->
             snackbarHostState.showSnackbar(msg)
             viewModel.consumeUnsupportedHint()
+        }
+    }
+
+    // Surface save-to-gallery success as a one-shot confirmation SnackBar.
+    LaunchedEffect(uiState.exportSuccess) {
+        if (uiState.exportSuccess) {
+            snackbarHostState.showSnackbar("已保存到相册")
+            viewModel.consumeExportSuccess()
         }
     }
 
@@ -129,11 +132,7 @@ fun ExportScreen(
             else -> {
                 ExportContent(
                     state = uiState,
-                    onShare = {
-                        uiState.posterBitmap?.let { bmp ->
-                            shareBitmap(context, bmp)
-                        }
-                    },
+                    onShare = { viewModel.sharePoster(context) },
                     onSave = { viewModel.savePoster(context) },
                     onSelectTemplate = viewModel::selectTemplate,
                     onBack = onBack
@@ -528,17 +527,5 @@ private fun BottomActionPanel(
 }
 
 // ===================================================================
-// Share helper — write Bitmap to cache + launch ACTION_SEND ShareSheet
+// Share helper — moved to ExportViewModel.sharePoster (off main thread)
 // ===================================================================
-
-private fun shareBitmap(context: android.content.Context, bitmap: android.graphics.Bitmap) {
-    val file = File(context.cacheDir, "poster_share.png")
-    file.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
-    val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-        type = "image/png"
-        putExtra(Intent.EXTRA_STREAM, uri)
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    context.startActivity(Intent.createChooser(shareIntent, "分享海报"))
-}

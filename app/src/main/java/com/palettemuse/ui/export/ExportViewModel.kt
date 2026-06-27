@@ -1,9 +1,11 @@
 package com.palettemuse.ui.export
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import androidx.core.content.FileProvider
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,11 +15,14 @@ import com.palettemuse.data.model.ThemeEntity
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeWithPhotos
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.io.File
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Which poster template the user has selected.
@@ -103,7 +108,12 @@ class ExportViewModel @Inject constructor(
 
     private fun applyThemeWithPhotos(result: ThemeWithPhotos) {
         val selected = result.photos.take(BENTO_PHOTO_COUNT)
-        val bitmap = renderPoster(result.theme, selected, result.palette)
+        // Pass the FULL photo list to renderPoster so the seed-photo-first
+        // selection logic can find the seed even when the theme has >4
+        // photos (PhotoDao orders by capturedAt DESC, so the seed photo —
+        // inserted at theme-creation time and oldest — sorts last and is
+        // dropped by `take(4)`). The Bento UI still uses the capped `selected`.
+        val bitmap = renderPoster(result.theme, result.photos, result.palette)
         _uiState.value = ExportUiState(
             theme = result.theme,
             photos = result.photos,
@@ -159,6 +169,39 @@ class ExportViewModel @Inject constructor(
     /** Clears the one-shot SnackBar hint after the host has shown it. */
     fun consumeUnsupportedHint() {
         _uiState.value = _uiState.value.copy(unsupportedTemplateHint = null)
+    }
+
+    /** Clears the one-shot save-success flag after the host has shown confirmation. */
+    fun consumeExportSuccess() {
+        _uiState.value = _uiState.value.copy(exportSuccess = false)
+    }
+
+    /**
+     * Shares the current poster Bitmap via [Intent.ACTION_SEND].
+     *
+     * The heavy PNG encoding + disk write happen on [Dispatchers.IO]; only the
+     * ShareSheet launch runs on the calling (main) thread. No-op when there is
+     * no poster to share.
+     */
+    fun sharePoster(context: Context) {
+        val bitmap = _uiState.value.posterBitmap ?: return
+        viewModelScope.launch {
+            val uri = withContext(Dispatchers.IO) {
+                runCatching {
+                    val file = File(context.cacheDir, "poster_share.png")
+                    file.outputStream().use {
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+                    }
+                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                }.getOrNull()
+            } ?: return@launch
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            context.startActivity(Intent.createChooser(shareIntent, "分享海报"))
+        }
     }
 
     /** Saves the current poster Bitmap to the gallery; flips [ExportUiState.exportSuccess]. */
