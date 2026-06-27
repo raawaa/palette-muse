@@ -18,6 +18,11 @@ val SpotShadowColor = Color(0xFFB76E79).copy(alpha = 0.08f)
 // Semantic helpers
 val SuccessGreen = Color(0xFF4CAF50)
 
+// Poster template backgrounds (Plan 4)
+val PosterBgFilm = Color(0xFFF5F5F0)
+val PosterBgJournal = Color(0xFFFAF8F5)
+val PosterBrown = Color(0xFF8B7355)
+
 // ===================================================================
 // Aura Aesthetic design tokens (from Stitch design HTML)
 // Shared across HomeScreen / ThemeDetailScreen / ExportScreen.

@@ -6,13 +6,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -48,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -62,6 +67,9 @@ import com.palettemuse.theme.OnSurfaceVariant
 import com.palettemuse.theme.OutlineVariant
 import com.palettemuse.theme.PlayfairDisplay
 import com.palettemuse.theme.PlusJakartaSans
+import com.palettemuse.theme.PosterBgFilm
+import com.palettemuse.theme.PosterBgJournal
+import com.palettemuse.theme.PosterBrown
 import com.palettemuse.theme.PrimaryDesign
 import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.RoseGoldDark
@@ -243,7 +251,7 @@ private fun PosterPreviewCard(
     template: PosterRenderer.TemplateType,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .aspectRatio(3f / 4f)
             .shadow(
@@ -255,16 +263,28 @@ private fun PosterPreviewCard(
             .clip(RoundedCornerShape(Dimens.cardCorner))
             .background(Color.White)
     ) {
+        val cardW = maxWidth
+        val cardH = maxHeight
+
+        // Photo layer — fills the full card
         when (template) {
             PosterRenderer.TemplateType.GRID ->
-                PosterPreviewGrid(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize())
+                PosterPreviewGrid(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.FILM ->
-                PosterPreviewFilm(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize())
+                PosterPreviewFilm(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.JOURNAL ->
-                PosterPreviewJournal(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize())
+                PosterPreviewJournal(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.MINIMAL ->
-                PosterPreviewMinimal(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize())
+                PosterPreviewMinimal(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
         }
+
+        // Footer overlay — drawn on top of photos (matching Canvas drawTitleAndPalette)
+        PosterFooter(
+            theme = theme,
+            palette = palette,
+            template = template,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }
 
@@ -277,7 +297,9 @@ private fun PosterPreviewGrid(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
     palette: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cardW: Dp = 0.dp,
+    cardH: Dp = 0.dp
 ) {
     Column(modifier = modifier.padding(16.dp)) {
         BentoCollage(
@@ -286,8 +308,6 @@ private fun PosterPreviewGrid(
                 .weight(1f)
                 .fillMaxWidth()
         )
-        Spacer(Modifier.height(16.dp))
-        PosterFooter(theme = theme, palette = palette)
     }
 }
 
@@ -300,37 +320,40 @@ private fun PosterPreviewFilm(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
     palette: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cardW: Dp,
+    cardH: Dp
 ) {
-    Column(modifier = modifier.background(Color.White)) {
-        // Top hero photo
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-                .border(2.dp, Color.Black)
-        ) {
-            PhotoSlot(photos.getOrNull(0), modifier = Modifier.fillMaxSize())
+    // Pixel-aligned with PosterRenderer.renderFilm:
+    //   top photo  h * 0.65f
+    //   bottom 3 photos  w / 3f  each  +  1px black border
+    Column(modifier = modifier.fillMaxSize().background(PosterBgFilm)) {
+        if (photos.isNotEmpty()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(cardH * 0.65f)
+            ) {
+                PhotoSlot(photos[0], modifier = Modifier.fillMaxSize())
+            }
         }
-        // 3-up bottom strip
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(160.dp)
+                .height(cardH * 0.35f)
         ) {
-            val stripCount = 3
-            for (i in 1..stripCount) {
+            for (i in 1..3.coerceAtMost(photos.size - 1)) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxSize()
-                        .border(2.dp, Color.White)
+                        .fillMaxHeight()
+                        .border(1.dp, Color.Black)
+                        .padding(2.dp)
                 ) {
-                    PhotoSlot(photos.getOrNull(i), modifier = Modifier.fillMaxSize())
+                    PhotoSlot(photos[i], modifier = Modifier.fillMaxSize())
                 }
             }
         }
-        PosterFooter(theme = theme, palette = palette)
     }
 }
 
@@ -343,52 +366,31 @@ private fun PosterPreviewJournal(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
     palette: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cardW: Dp,
+    cardH: Dp
 ) {
-    Column(modifier = modifier.background(Color.White).padding(16.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
+    // Pixel-aligned with PosterRenderer.renderJournal:
+    //   cellW = w / 2f, cellH = h * 0.4f, rotate ±3°
+    val cellW = cardW / 2f
+    val cellH = cardH * 0.4f
+    Box(modifier = modifier.fillMaxSize().background(PosterBgJournal)) {
+        for ((i, photo) in photos.take(3).withIndex()) {
+            val row = i / 2
+            val col = i % 2
+            val angle = if (i % 2 == 0) -3f else 3f
             Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .rotate(-3f)
-                    .border(2.dp, Color.Black)
+                    .offset(x = cellW * col.toFloat(), y = cellH * row.toFloat())
+                    .size(cellW, cellH)
+                    .rotate(angle)
+                    .padding(4.dp)
             ) {
-                PhotoSlot(photos.getOrNull(0), modifier = Modifier.fillMaxSize())
-            }
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .rotate(3f)
-                    .border(2.dp, Color.Black)
-            ) {
-                PhotoSlot(photos.getOrNull(1), modifier = Modifier.fillMaxSize())
+                Box(modifier = Modifier.fillMaxSize().border(1.dp, Color.Black)) {
+                    PhotoSlot(photo = photo, modifier = Modifier.fillMaxSize())
+                }
             }
         }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .rotate(3f)
-                    .border(2.dp, Color.Black)
-            ) {
-                PhotoSlot(photos.getOrNull(2), modifier = Modifier.fillMaxSize())
-            }
-        }
-        PosterFooter(theme = theme, palette = palette)
     }
 }
 
@@ -401,28 +403,35 @@ private fun PosterPreviewMinimal(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
     palette: List<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cardW: Dp,
+    cardH: Dp
 ) {
-    Column(modifier = modifier.background(Color.White)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .weight(3f)
-        ) {
-            PhotoSlot(photos.getOrNull(0), modifier = Modifier.fillMaxSize())
-            // Small corner photo
+    // Pixel-aligned with PosterRenderer.renderMinimal:
+    //   main photo  h * 0.7f
+    //   accent photo  w * 0.2f  at BottomEnd  offset(-16.dp)  border(2.dp, Color.White)
+    Box(modifier = modifier.fillMaxSize().background(Color.White)) {
+        if (photos.isNotEmpty()) {
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(16.dp)
-                    .size(80.dp)
-                    .border(2.dp, Color.Black)
+                    .fillMaxWidth()
+                    .height(cardH * 0.7f)
             ) {
-                PhotoSlot(photos.getOrNull(1), modifier = Modifier.fillMaxSize())
+                PhotoSlot(photos[0], modifier = Modifier.fillMaxSize())
+            }
+            if (photos.size > 1) {
+                val accentW = cardW * 0.2f
+                Box(
+                    modifier = Modifier
+                        .size(accentW)
+                        .align(Alignment.BottomEnd)
+                        .offset(x = (-16).dp, y = (-16).dp)
+                        .border(2.dp, Color.White)
+                ) {
+                    PhotoSlot(photos[1], modifier = Modifier.fillMaxSize())
+                }
             }
         }
-        Spacer(Modifier.weight(1f))
-        PosterFooter(theme = theme, palette = palette)
     }
 }
 
@@ -486,29 +495,58 @@ private fun BentoCollage(
 // ===================================================================
 
 @Composable
-private fun PosterFooter(theme: ThemeEntity, palette: List<String>) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
+private fun PosterFooter(
+    theme: ThemeEntity,
+    palette: List<String>,
+    template: PosterRenderer.TemplateType,
+    modifier: Modifier = Modifier
+) {
+    // Template-specific styling (Plan 4 Task 1)
+    val (bg, titleSize, paletteSize) = when (template) {
+        PosterRenderer.TemplateType.GRID    -> Triple(Color.White, 64.sp, 40.dp)
+        PosterRenderer.TemplateType.FILM    -> Triple(PosterBgFilm, 48.sp, 18.dp)
+        PosterRenderer.TemplateType.JOURNAL -> Triple(PosterBgJournal, 56.sp, 24.dp)
+        PosterRenderer.TemplateType.MINIMAL -> Triple(Color.White, 36.sp, 16.dp)
+    }
+    val titleColor = if (template == PosterRenderer.TemplateType.JOURNAL) PosterBrown else Color.Black
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(bg)
+            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = theme.name,
-                fontFamily = PlayfairDisplay,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 28.sp,
-                color = OnSurface
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = "Palette Muse 合集",
-                fontFamily = PlusJakartaSans,
-                fontSize = 14.sp,
-                color = OnSurfaceVariant
-            )
+        Text(
+            text = theme.name,
+            fontSize = titleSize,
+            fontFamily = PlayfairDisplay,
+            color = titleColor
+        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            palette.take(3).forEach { hex ->
+                Box(
+                    modifier = Modifier
+                        .size(paletteSize)
+                        .background(
+                            color = parseHex(hex),
+                            shape = if (template == PosterRenderer.TemplateType.JOURNAL)
+                                RoundedCornerShape(8.dp) else CircleShape
+                        )
+                        .border(
+                            width = if (template == PosterRenderer.TemplateType.FILM) 1.dp else 0.dp,
+                            color = Color.Black,
+                            shape = if (template == PosterRenderer.TemplateType.JOURNAL)
+                                RoundedCornerShape(8.dp) else CircleShape
+                        )
+                )
+                Spacer(Modifier.width(8.dp))
+            }
         }
-        PaletteTag(palette = palette)
     }
 }
 
