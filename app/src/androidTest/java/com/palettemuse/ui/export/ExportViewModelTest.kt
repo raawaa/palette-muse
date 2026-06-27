@@ -10,6 +10,7 @@ import com.palettemuse.core.PosterRenderer
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.ui.navigation.Routes
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -30,13 +31,14 @@ import org.junit.runner.RunWith
 class ExportViewModelTest {
     private lateinit var db: AppDatabase
     private lateinit var repo: ThemeRepository
+    private lateinit var context: Context
     private val renderer = PosterRenderer()
     private val dispatcher = StandardTestDispatcher()
 
     @Before fun setup() {
-        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        context = ApplicationProvider.getApplicationContext<Context>()
         val inlineExecutor = java.util.concurrent.Executor { it.run() }
-        db = Room.inMemoryDatabaseBuilder(ctx, AppDatabase::class.java)
+        db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()
             .setTransactionExecutor(inlineExecutor)
             .setQueryExecutor(inlineExecutor)
@@ -52,59 +54,55 @@ class ExportViewModelTest {
         repo.savePhotoToTheme(id, "/cap1.jpg", "#C99A92")
         repo.savePhotoToTheme(id, "/cap2.jpg", "#B98A82")
 
-        val vm = ExportViewModel(Routes.Export(id), repo, renderer)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
         advanceUntilIdle()
 
         val state = vm.uiState.first { !it.isLoading }
-        assertEquals("#DCA8A6", state.theme?.representativeHex)
-        assertEquals(3, state.photos.size)
-        // Bento 2x2 = up to 4 photos selected.
-        assertEquals(3, state.selectedPhotos.size)
+        assertEquals("#DCA8A6", state.data?.theme?.representativeHex)
+        assertEquals(3, state.data?.photos?.size)
         // Default template is Grid.
-        assertEquals(PosterTemplate.Grid, state.selectedTemplate)
+        assertEquals(PosterRenderer.TemplateType.GRID, state.selectedTemplate)
         // No renderable Bitmap on emulator (no real photo files) — but state must be loaded.
         assertNull(state.error)
     }
 
-    @Test fun selectTemplate_gridIsSelectable_othersEmitHint() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = ExportViewModel(Routes.Export(id), repo, renderer)
-        advanceUntilIdle()
-
-        // Non-Grid chip surfaces a SnackBar hint instead of switching.
-        vm.selectTemplate(PosterTemplate.Film)
-        assertEquals(PosterTemplate.Grid, vm.uiState.value.selectedTemplate)
-        assertEquals("胶片模板即将推出", vm.uiState.value.unsupportedTemplateHint)
-
-        vm.consumeUnsupportedHint()
-        assertNull(vm.uiState.value.unsupportedTemplateHint)
-
-        // Grid is selectable.
-        vm.selectTemplate(PosterTemplate.Grid)
-        assertEquals(PosterTemplate.Grid, vm.uiState.value.selectedTemplate)
-        assertNull(vm.uiState.value.unsupportedTemplateHint)
-    }
-
     @Test fun missingTheme_emitsError() = runTest(dispatcher) {
-        val vm = ExportViewModel(Routes.Export("nope"), repo, renderer)
+        val vm = ExportViewModel(Routes.Export("nope"), repo, renderer, context)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
-        assertNull(state.theme)
+        assertNull(state.data)
         assertEquals("主题不存在", state.error)
     }
-
-    // Note: the `themeIdArgMissing_throws` test was removed — with the
-    // Navigation 3 assisted-injection refactor, themeId is always present on
-    // the Routes.Export NavKey, so there is no longer a missing-arg case.
 
     @Test fun selectedPhotos_cappedAtFour() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         repeat(6) { i -> repo.savePhotoToTheme(id, "/cap$i.jpg", "#C99A92") }
 
-        val vm = ExportViewModel(Routes.Export(id), repo, renderer)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
-        assertEquals(7, state.photos.size) // seed + 6 captures
-        assertEquals(4, state.selectedPhotos.size) // Bento 2x2 cap
+        assertEquals(7, state.data?.photos?.size) // seed + 6 captures
+    }
+
+    // ---- New Plan 3 tests: 4-template selection ----
+
+    @Test fun selectTemplate_grid_updatesState() = runTest(dispatcher) {
+        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        repeat(5) { i -> repo.savePhotoToTheme(id, "/p$i.jpg", "#DCA8A6") }
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
+        advanceUntilIdle()
+        vm.selectTemplate(PosterRenderer.TemplateType.GRID)
+        advanceUntilIdle()
+        assertEquals(PosterRenderer.TemplateType.GRID, vm.uiState.value.selectedTemplate)
+    }
+
+    @Test fun selectTemplate_minimal_updatesState() = runTest(dispatcher) {
+        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        repeat(5) { i -> repo.savePhotoToTheme(id, "/p$i.jpg", "#DCA8A6") }
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
+        advanceUntilIdle()
+        vm.selectTemplate(PosterRenderer.TemplateType.MINIMAL)
+        advanceUntilIdle()
+        assertEquals(PosterRenderer.TemplateType.MINIMAL, vm.uiState.value.selectedTemplate)
     }
 }

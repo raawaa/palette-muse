@@ -9,8 +9,6 @@ import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.PosterRenderer
-import com.palettemuse.data.model.PhotoEntity
-import com.palettemuse.data.model.ThemeEntity
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeWithPhotos
 import com.palettemuse.ui.navigation.Routes
@@ -18,6 +16,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,58 +26,36 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * Which poster template the user has selected.
- *
- * MVP: only [Grid] produces a real poster; the others are surfaced as chips but
- * selecting them only emits a user-facing message (the host shows a SnackBar).
- */
-enum class PosterTemplate(val label: String) {
-    Grid("网格"),
-    Film("胶片"),
-    Diary("日记"),
-    Minimal("极简")
-}
-
-/**
  * UI state for the Export screen.
  *
- * @param theme      the loaded theme, or null while loading / when missing.
- * @param photos     all photos for the theme (preview renders up to the first 4).
- * @param palette    the 3-color palette built by [ThemeRepository] (hex strings).
- * @param selectedPhotos  the (up to 4) photos chosen for the Bento 2x2 preview.
- * @param selectedTemplate the currently active template chip (MVP: only Grid).
- * @param posterBitmap    the composed poster Bitmap used for save / share.
- *                       Built with [PosterRenderer.render] from the seed photo +
- *                       theme name + palette. May be null if no usable photo.
- * @param isLoading  true while the initial load / render is in flight.
- * @param exportSuccess true once a save-to-gallery has succeeded (host shows a toast).
- * @param unsupportedTemplateHint non-null when the user tapped a non-Grid chip;
- *                       the host surfaces this as a SnackBar then clears it.
- * @param error      optional error message; null means no error.
+ * @param data the loaded [ThemeWithPhotos] (theme + photos + palette) or null when missing / loading.
+ * @param selectedTemplate the currently active template chip. All 4 templates are selectable in Plan 3.
+ * @param previewBitmap the composed poster Bitmap used for save / share.
+ *                       Built with [PosterRenderer.render] from photos picked per template +
+ *                       theme name + primary color. May be null if no usable photo was found.
+ * @param isLoading true while the initial load / render is in flight.
+ * @param exportSuccess true once a save-to-gallery has succeeded (host shows a SnackBar).
+ * @param error optional error message; null means no error.
  */
 data class ExportUiState(
-    val theme: ThemeEntity? = null,
-    val photos: List<PhotoEntity> = emptyList(),
-    val palette: List<String> = emptyList(),
-    val selectedPhotos: List<PhotoEntity> = emptyList(),
-    val selectedTemplate: PosterTemplate = PosterTemplate.Grid,
-    val posterBitmap: Bitmap? = null,
+    val data: ThemeWithPhotos? = null,
+    val selectedTemplate: PosterRenderer.TemplateType = PosterRenderer.TemplateType.GRID,
+    val previewBitmap: Bitmap? = null,
     val isLoading: Boolean = true,
     val exportSuccess: Boolean = false,
-    val unsupportedTemplateHint: String? = null,
     val error: String? = null
 )
 
 // Navigation 3 passes arguments to ViewModels via assisted injection of the
 // NavKey (see navigation-3 recipe "passingarguments/viewmodels/hilt"). The
 // `@HiltViewModel(assistedFactory = ...)` form lets us receive the
-// `Routes.Export` key and read `themeId` off it directly — there is no
-// `SavedStateHandle` populated with route args in Navigation 3.
+// `Routes.Export` key and read `themeId` off it directly.
 @HiltViewModel(assistedFactory = ExportViewModel.Factory::class)
 class ExportViewModel @AssistedInject constructor(
     @Assisted private val navKey: Routes.Export,
     private val themeRepository: ThemeRepository,
-    private val posterRenderer: PosterRenderer
+    private val posterRenderer: PosterRenderer,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     val themeId: String = navKey.themeId
@@ -95,7 +72,7 @@ class ExportViewModel @AssistedInject constructor(
         load()
     }
 
-    /** Loads [ThemeWithPhotos] for [themeId], selects up to 4 photos and renders the poster. */
+    /** Loads [ThemeWithPhotos] for [themeId] and renders the initial Grid preview. */
     fun load() {
         _uiState.value = _uiState.value.copy(isLoading = true, error = null)
         viewModelScope.launch {
@@ -105,7 +82,12 @@ class ExportViewModel @AssistedInject constructor(
                         _uiState.value = ExportUiState(isLoading = false, error = "主题不存在")
                         return@launch
                     }
-                    applyThemeWithPhotos(result)
+                    _uiState.value = _uiState.value.copy(
+                        data = result,
+                        isLoading = false,
+                        error = null
+                    )
+                    generatePreview()
                 }
                 .onFailure { err ->
                     _uiState.value = ExportUiState(
@@ -116,69 +98,71 @@ class ExportViewModel @AssistedInject constructor(
         }
     }
 
-    private fun applyThemeWithPhotos(result: ThemeWithPhotos) {
-        val selected = result.photos.take(BENTO_PHOTO_COUNT)
-        // Pass the FULL photo list to renderPoster so the seed-photo-first
-        // selection logic can find the seed even when the theme has >4
-        // photos (PhotoDao orders by capturedAt DESC, so the seed photo —
-        // inserted at theme-creation time and oldest — sorts last and is
-        // dropped by `take(4)`). The Bento UI still uses the capped `selected`.
-        val bitmap = renderPoster(result.theme, result.photos, result.palette)
-        _uiState.value = ExportUiState(
-            theme = result.theme,
-            photos = result.photos,
-            palette = result.palette,
-            selectedPhotos = selected,
-            posterBitmap = bitmap,
-            isLoading = false
-        )
+    /**
+     * Switches the active template chip and re-renders the preview with the photo count
+     * appropriate for that template (GRID=4 / FILM=4 / JOURNAL=3 / MINIMAL=2,
+     * capped to `data.photos.size`).
+     */
+    fun selectTemplate(template: PosterRenderer.TemplateType) {
+        _uiState.value = _uiState.value.copy(selectedTemplate = template)
+        viewModelScope.launch { generatePreview() }
     }
 
     /**
-     * Builds the poster Bitmap via [PosterRenderer.render] from the seed photo
-     * (or the first available photo) + theme name + palette.
+     * Builds the preview Bitmap via [PosterRenderer.render].
      *
-     * MVP note: PosterRenderer renders a *single* hero photo + title + palette
-     * swatches. The 4-image Bento collage is a UI-only preview; the exported
-     * file currently uses this single-photo composition. Multi-photo collages
-     * are deferred to Plan 3.
+     * Picks `count` photos (GRID=4 / FILM=4 / JOURNAL=3 / MINIMAL=2, capped to the
+     * available photos), decodes each imagePath on [Dispatchers.IO], then renders
+     * the chosen template on [Dispatchers.Default]. Missing/unreadable photo files
+     * are silently skipped — we still render whatever we could decode.
      */
-    private fun renderPoster(
-        theme: ThemeEntity,
-        photos: List<PhotoEntity>,
-        palette: List<String>
-    ): Bitmap? {
-        val seedPhoto = photos.firstOrNull { it.isSeed } ?: photos.firstOrNull() ?: return null
-        val photo = runCatching { BitmapFactory.decodeFile(seedPhoto.imagePath) }.getOrNull()
-            ?: return null
-
-        val config = PosterRenderer.PosterConfig(
-            title = theme.name.ifBlank { "Moodboard Color Harmony" },
-            subtitle = "curated with Palette Muse",
-            primaryColor = palette.parseColorOr(0, Color.GRAY),
-            secondaryColor = palette.parseColorOr(1, Color.LTGRAY),
-            accentColor = palette.parseColorOr(2, Color.DKGRAY)
-        )
-        return posterRenderer.render(photo, config)
-    }
-
-    /** Selects a template chip. MVP: only [PosterTemplate.Grid] is supported. */
-    fun selectTemplate(template: PosterTemplate) {
-        if (template == PosterTemplate.Grid) {
-            _uiState.value = _uiState.value.copy(
-                selectedTemplate = template,
-                unsupportedTemplateHint = null
-            )
-        } else {
-            _uiState.value = _uiState.value.copy(
-                unsupportedTemplateHint = "${template.label}模板即将推出"
-            )
+    private suspend fun generatePreview() {
+        val data = _uiState.value.data ?: return
+        val template = _uiState.value.selectedTemplate
+        val count = when (template) {
+            PosterRenderer.TemplateType.GRID -> 4
+            PosterRenderer.TemplateType.FILM -> 4
+            PosterRenderer.TemplateType.JOURNAL -> 3
+            PosterRenderer.TemplateType.MINIMAL -> 2
+        }.coerceAtMost(data.photos.size)
+        val bitmaps = withContext(Dispatchers.IO) {
+            data.photos.take(count).map { loadBitmap(it.imagePath) }
         }
+        val photos = bitmaps.filterNotNull()
+        val primary = parseHexOrGray(data.theme.representativeHex)
+        val config = PosterRenderer.PosterConfig(
+            title = data.theme.name.ifBlank { "Moodboard Color Harmony" },
+            subtitle = "curated with Palette Muse",
+            primaryColor = primary,
+            secondaryColor = adjustLightness(primary, 0.85f),
+            accentColor = adjustLightness(primary, 0.25f),
+            photos = photos,
+            template = template
+        )
+        val preview = withContext(Dispatchers.Default) {
+            posterRenderer.render(null, config)
+        }
+        _uiState.value = _uiState.value.copy(previewBitmap = preview)
     }
 
-    /** Clears the one-shot SnackBar hint after the host has shown it. */
-    fun consumeUnsupportedHint() {
-        _uiState.value = _uiState.value.copy(unsupportedTemplateHint = null)
+    private fun loadBitmap(path: String): Bitmap? = try {
+        File(path).takeIf { it.exists() }?.inputStream()?.use { BitmapFactory.decodeStream(it) }
+    } catch (e: Exception) {
+        null
+    }
+
+    private fun parseHexOrGray(hex: String): Int = try {
+        Color.parseColor(hex)
+    } catch (e: Exception) {
+        Color.GRAY
+    }
+
+    /** Returns [base] with its luminance nudged by [factor] (0.0 = black, 1.0 = white). */
+    private fun adjustLightness(base: Int, factor: Float): Int {
+        val r = (Color.red(base) * factor).toInt().coerceIn(0, 255)
+        val g = (Color.green(base) * factor).toInt().coerceIn(0, 255)
+        val b = (Color.blue(base) * factor).toInt().coerceIn(0, 255)
+        return Color.rgb(r, g, b)
     }
 
     /** Clears the one-shot save-success flag after the host has shown confirmation. */
@@ -187,14 +171,14 @@ class ExportViewModel @AssistedInject constructor(
     }
 
     /**
-     * Shares the current poster Bitmap via [Intent.ACTION_SEND].
+     * Shares the current preview Bitmap via [Intent.ACTION_SEND].
      *
      * The heavy PNG encoding + disk write happen on [Dispatchers.IO]; only the
      * ShareSheet launch runs on the calling (main) thread. No-op when there is
      * no poster to share.
      */
     fun sharePoster(context: Context) {
-        val bitmap = _uiState.value.posterBitmap ?: return
+        val bitmap = _uiState.value.previewBitmap ?: return
         viewModelScope.launch {
             val uri = withContext(Dispatchers.IO) {
                 runCatching {
@@ -214,9 +198,9 @@ class ExportViewModel @AssistedInject constructor(
         }
     }
 
-    /** Saves the current poster Bitmap to the gallery; flips [ExportUiState.exportSuccess]. */
+    /** Saves the current preview Bitmap to the gallery; flips [ExportUiState.exportSuccess]. */
     fun savePoster(context: Context) {
-        val bitmap = _uiState.value.posterBitmap ?: return
+        val bitmap = _uiState.value.previewBitmap ?: return
         viewModelScope.launch {
             runCatching { posterRenderer.saveToGallery(context, bitmap) }
                 .onSuccess { uri ->
@@ -226,13 +210,5 @@ class ExportViewModel @AssistedInject constructor(
                     _uiState.value = _uiState.value.copy(error = err.message ?: "保存失败")
                 }
         }
-    }
-
-    private fun List<String>.parseColorOr(index: Int, fallback: Int): Int =
-        getOrNull(index)?.let { hex -> runCatching { Color.parseColor(hex) }.getOrNull() } ?: fallback
-
-    companion object {
-        /** Number of photos surfaced in the Bento 2x2 preview grid. */
-        const val BENTO_PHOTO_COUNT = 4
     }
 }
