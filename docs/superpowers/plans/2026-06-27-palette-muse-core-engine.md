@@ -104,7 +104,7 @@ class ThemeDaoTest {
 
 - [ ] **Step 2: 运行测试，确认失败**
 
-Run: `./gradlew :app:connectedAndroidTest --tests "com.palettemuse.data.ThemeDaoTest"`（需连接设备/模拟器）
+Run: `./gradlew :app:connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.palettemuse.data.ThemeDaoTest`（需连接设备/模拟器）
 Expected: 编译失败 — `ThemeEntity` / `PhotoEntity` / `themeDao()` / `photoDao()` 未定义。
 
 - [ ] **Step 3: 创建 `ThemeEntity`**
@@ -166,7 +166,6 @@ Create `app/src/main/java/com/palettemuse/data/local/ThemeDao.kt`:
 package com.palettemuse.data.local
 
 import androidx.room.Dao
-import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
@@ -268,7 +267,7 @@ In `app/src/main/java/com/palettemuse/di/AppModule.kt`, 修改 `provideDatabase`
 
 - [ ] **Step 9: 运行测试，确认通过**
 
-Run: `./gradlew :app:connectedAndroidTest --tests "com.palettemuse.data.ThemeDaoTest"`
+Run: `./gradlew :app:connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.palettemuse.data.ThemeDaoTest`
 Expected: 2 tests PASS。
 
 - [ ] **Step 10: Commit**
@@ -325,7 +324,7 @@ class ColorAnalyzerTest {
 
 - [ ] **Step 2: 运行，确认失败**
 
-Run: `./gradlew :app:connectedAndroidTest --tests "com.palettemuse.core.ColorAnalyzerTest"`
+Run: `./gradlew :app:connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.palettemuse.core.ColorAnalyzerTest`
 Expected: 编译失败 — `extractDominantHex` 未定义。
 
 - [ ] **Step 3: 加 `extractDominantHex`**
@@ -344,7 +343,7 @@ In `ColorAnalyzer.kt` 的 `@Singleton class ColorAnalyzer` 内加（保留现有
 
 - [ ] **Step 4: 运行，确认通过**
 
-Run: `./gradlew :app:connectedAndroidTest --tests "com.palettemuse.core.ColorAnalyzerTest"`
+Run: `./gradlew :app:connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.palettemuse.core.ColorAnalyzerTest`
 Expected: PASS。
 
 - [ ] **Step 5: Commit**
@@ -457,7 +456,7 @@ class ThemeRepositoryTest {
 
 - [ ] **Step 2: 运行，确认失败**
 
-Run: `./gradlew :app:connectedAndroidTest --tests "com.palettemuse.data.ThemeRepositoryTest"`
+Run: `./gradlew :app:connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.palettemuse.data.ThemeRepositoryTest`
 Expected: 编译失败 — `ThemeRepository` / `ThemeWithPhotos` 未定义。
 
 - [ ] **Step 3: 创建 `ThemeRepository`**
@@ -581,7 +580,7 @@ class ThemeRepository @Inject constructor(
 
 - [ ] **Step 4: 运行，确认通过**
 
-Run: `./gradlew :app:connectedAndroidTest --tests "com.palettemuse.data.ThemeRepositoryTest"`
+Run: `./gradlew :app:connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.palettemuse.data.ThemeRepositoryTest`
 Expected: 5 tests PASS。
 
 - [ ] **Step 5: Commit**
@@ -767,7 +766,7 @@ class CaptureViewModelTest {
 
 - [ ] **Step 2: 运行，确认失败**
 
-Run: `./gradlew :app:connectedAndroidTest --tests "com.palettemuse.ui.capture.CaptureViewModelTest"`
+Run: `./gradlew :app:connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.palettemuse.ui.capture.CaptureViewModelTest`
 Expected: 编译失败 — `CaptureViewModel` 签名变了、`setPending` 未定义。
 
 - [ ] **Step 3: 重写 `CaptureViewModel`**
@@ -887,7 +886,7 @@ class CaptureViewModel @Inject constructor(
 
 - [ ] **Step 4: 运行，确认通过**
 
-Run: `./gradlew :app:connectedAndroidTest --tests "com.palettemuse.ui.capture.CaptureViewModelTest"`
+Run: `./gradlew :app:connectedAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.palettemuse.ui.capture.CaptureViewModelTest`
 Expected: 3 tests PASS（confirm/save 各分支）。
 
 - [ ] **Step 5: Commit**
