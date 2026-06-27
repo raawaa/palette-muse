@@ -75,6 +75,15 @@ class ColorAnalyzer @Inject constructor() {
         )
     }
 
+    suspend fun extractDominantHex(bitmap: Bitmap): String = withContext(Dispatchers.Default) {
+        val palette = Palette.from(bitmap)
+            .maximumColorCount(12)
+            .clearFilters()
+            .resizeBitmapArea(96 * 96)
+            .generate()
+        palette.dominantSwatch?.rgb?.toHex() ?: "#808080"
+    }
+
     private fun Int.toHex(): String {
         return "#%06X".format(this and 0xFFFFFF)
     }
