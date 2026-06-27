@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PhotoDao {
-    @Query("SELECT * FROM photos WHERE themeId = :themeId ORDER BY capturedAt DESC")
+    @Query("SELECT * FROM photos WHERE themeId = :themeId ORDER BY capturedAt DESC, id DESC")
     fun observePhotosForTheme(themeId: String): Flow<List<PhotoEntity>>
 
-    @Query("SELECT * FROM photos WHERE themeId = :themeId ORDER BY capturedAt DESC")
+    @Query("SELECT * FROM photos WHERE themeId = :themeId ORDER BY capturedAt DESC, id DESC")
     suspend fun getPhotosForThemeOnce(themeId: String): List<PhotoEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

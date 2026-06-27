@@ -15,7 +15,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.FlipCameraIos
@@ -23,7 +22,6 @@ import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,7 +37,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -86,6 +83,9 @@ fun CaptureScreen(
     val context = LocalContext.current
     val cameraManager = remember { CameraManager() }
     var hasCameraPermission by remember { mutableStateOf(false) }
+    // One-shot flag for capture failure feedback (consumed by the Snackbar LaunchedEffect below).
+    val captureError = remember { androidx.compose.runtime.mutableStateOf(false) }
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -97,6 +97,14 @@ fun CaptureScreen(
         ) == PackageManager.PERMISSION_GRANTED
         if (!hasCameraPermission) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
+
+    // Surface capture failure as a transient Snackbar ("拍照失败，请重试").
+    LaunchedEffect(captureError.value) {
+        if (captureError.value) {
+            snackbarHostState.showSnackbar("拍照失败，请重试")
+            captureError.value = false
         }
     }
 
@@ -236,85 +244,6 @@ fun CaptureScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 24.dp)
         ) {
-            // Captured gallery
-            Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "CAPTURED (${uiState.capturedSwatches.size})",
-                        fontSize = 10.sp,
-                        letterSpacing = 1.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF524345)
-                    )
-                    Text(
-                        text = "View All",
-                        fontSize = 14.sp,
-                        color = RoseGold,
-                        modifier = Modifier.clickable { }
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier
-                        .horizontalScroll(rememberScrollState())
-                        .padding(bottom = 16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    uiState.capturedSwatches.forEach { swatch ->
-                        Box(
-                            modifier = Modifier
-                                .size(width = 80.dp, height = 96.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(Color(android.graphics.Color.parseColor(swatch.hexColor)))
-                                .border(
-                                    0.5.dp,
-                                    Color(0xFFD7C1C3).copy(alpha = 0.3f),
-                                    RoundedCornerShape(12.dp)
-                                )
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomEnd)
-                                    .padding(4.dp)
-                                    .background(
-                                        Color.White.copy(alpha = 0.8f),
-                                        RoundedCornerShape(4.dp)
-                                    )
-                                    .padding(horizontal = 4.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "${swatch.matchPercentage}%",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RoseGold
-                                )
-                            }
-                        }
-                    }
-
-                    // Add placeholder
-                    Box(
-                        modifier = Modifier
-                            .size(width = 80.dp, height = 96.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .border(
-                                2.dp,
-                                Color(0xFFD7C1C3).copy(alpha = 0.5f),
-                                RoundedCornerShape(12.dp)
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = "Add", tint = Color(0xFFD7C1C3), modifier = Modifier.size(32.dp))
-                    }
-                }
-            }
-
             // Shutter controls
             Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
@@ -337,7 +266,10 @@ fun CaptureScreen(
                             cameraManager.takePhoto(
                                 context,
                                 onPhotoTaken = { bmp -> viewModel.capturePhoto(bmp) },
-                                onError = { /* TODO Plan 2: 错误提示 */ }
+                                onError = {
+                                    // Surface capture failure to the user via Snackbar.
+                                    captureError.value = true
+                                }
                             )
                         },
                     contentAlignment = Alignment.Center
@@ -375,6 +307,14 @@ fun CaptureScreen(
                 )
             }
         }
+
+        // === Layer 8: Capture failure feedback (Snackbar) ===
+        androidx.compose.material3.SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 110.dp) // clear the shutter controls
+        )
     }
 }
 

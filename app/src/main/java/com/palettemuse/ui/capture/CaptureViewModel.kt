@@ -15,12 +15,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-data class CapturedSwatch(
-    val hexColor: String,
-    val semanticName: String,
-    val matchPercentage: Int
-)
-
 data class PendingCapture(
     val imagePath: String,
     val dominantHex: String,
@@ -29,7 +23,6 @@ data class PendingCapture(
 
 data class CaptureUiState(
     val matchPercentage: Int = 0,
-    val capturedSwatches: List<CapturedSwatch> = emptyList(),
     val lensFacing: Int = CameraSelector.LENS_FACING_BACK,
     val isAnalyzing: Boolean = false,
     val pendingCapture: PendingCapture? = null
@@ -48,6 +41,10 @@ class CaptureViewModel @Inject constructor(
 
     fun onFrameAnalyzed(pixels: IntArray, width: Int, height: Int) {
         val sampleHex = colorMatcher.extractCenterAverageColor(pixels, width, height)
+        // TODO Plan 3: 实时匹配最接近的主题色 — inject ThemeRepository, cache themes as a
+        // StateFlow in init (avoid per-frame DB I/O on the analyzer thread), and pick the
+        // best-matching theme's representativeHex here. Also surface the matched theme name
+        // to CaptureScreen's TARGET pill (currently hardcoded "Rose Gold" / #B76E79).
         _uiState.value = _uiState.value.copy(
             matchPercentage = colorMatcher.matchPercentage("#B76E79", sampleHex)
         )
