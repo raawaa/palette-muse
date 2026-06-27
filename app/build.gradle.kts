@@ -79,7 +79,7 @@ dependencies {
   androidTestImplementation(libs.androidx.test.ext.junit)
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.test.espresso.core)
-  // Direct dep so asExecutor() and other coroutines-test APIs are resolvable
+  // Direct dep for runTest / advanceUntilIdle / StandardTestDispatcher
   // (transitive pull from androidx.test only surfaces a BOM constraint).
   androidTestImplementation(libs.kotlinx.coroutines.test)
 
