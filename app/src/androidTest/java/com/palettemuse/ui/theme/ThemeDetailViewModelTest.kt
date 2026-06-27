@@ -1,7 +1,6 @@
 package com.palettemuse.ui.theme
 
 import android.content.Context
-import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -9,6 +8,7 @@ import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.ui.navigation.Routes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -47,7 +47,7 @@ class ThemeDetailViewModelTest {
     @Test fun loadsThemeWithPhotos() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         repo.savePhotoToTheme(id, "/cap1.jpg", "#C99A92")
-        val vm = ThemeDetailViewModel(SavedStateHandle(mapOf("themeId" to id)), repo)
+        val vm = ThemeDetailViewModel(Routes.ThemeDetail(id), repo)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
         assertEquals("#DCA8A6", state.data?.theme?.representativeHex)
@@ -57,7 +57,7 @@ class ThemeDetailViewModelTest {
     }
 
     @Test fun missingTheme_emitsNullData() = runTest(dispatcher) {
-        val vm = ThemeDetailViewModel(SavedStateHandle(mapOf("themeId" to "nope")), repo)
+        val vm = ThemeDetailViewModel(Routes.ThemeDetail("nope"), repo)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
         assertNull(state.data)
@@ -65,7 +65,7 @@ class ThemeDetailViewModelTest {
 
     @Test fun renameTheme_updatesState() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = ThemeDetailViewModel(SavedStateHandle(mapOf("themeId" to id)), repo)
+        val vm = ThemeDetailViewModel(Routes.ThemeDetail(id), repo)
         advanceUntilIdle()
         vm.renameTheme("新主题名")
         advanceUntilIdle()
@@ -75,7 +75,7 @@ class ThemeDetailViewModelTest {
 
     @Test fun deleteTheme_clearsState() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = ThemeDetailViewModel(SavedStateHandle(mapOf("themeId" to id)), repo)
+        val vm = ThemeDetailViewModel(Routes.ThemeDetail(id), repo)
         advanceUntilIdle()
         vm.deleteTheme()
         advanceUntilIdle()

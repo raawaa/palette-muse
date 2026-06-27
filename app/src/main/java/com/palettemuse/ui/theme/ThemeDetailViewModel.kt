@@ -1,12 +1,14 @@
 package com.palettemuse.ui.theme
 
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeWithPhotos
+import com.palettemuse.ui.navigation.Routes
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,14 +29,22 @@ data class ThemeDetailUiState(
     val isDeleted: Boolean = false
 )
 
-@HiltViewModel
-class ThemeDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+// Navigation 3 passes arguments to ViewModels via assisted injection of the
+// NavKey (see navigation-3 recipe "passingarguments/viewmodels/hilt"). The
+// `@HiltViewModel(assistedFactory = ...)` form lets us receive the
+// `Routes.ThemeDetail` key and read `themeId` off it directly — there is no
+// `SavedStateHandle` populated with route args in Navigation 3.
+@HiltViewModel(assistedFactory = ThemeDetailViewModel.Factory::class)
+class ThemeDetailViewModel @AssistedInject constructor(
+    @Assisted private val navKey: Routes.ThemeDetail,
     private val themeRepository: ThemeRepository
 ) : ViewModel() {
 
-    val themeId: String = checkNotNull(savedStateHandle.get<String>("themeId")) {
-        "ThemeDetailViewModel requires a 'themeId' argument"
+    val themeId: String = navKey.themeId
+
+    @AssistedFactory
+    interface Factory {
+        fun create(navKey: Routes.ThemeDetail): ThemeDetailViewModel
     }
 
     private val _uiState = MutableStateFlow(ThemeDetailUiState())

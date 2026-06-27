@@ -6,7 +6,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
 import androidx.core.content.FileProvider
-import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.PosterRenderer
@@ -14,9 +13,12 @@ import com.palettemuse.data.model.PhotoEntity
 import com.palettemuse.data.model.ThemeEntity
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeWithPhotos
+import com.palettemuse.ui.navigation.Routes
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedFactory
+import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
-import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -67,15 +69,23 @@ data class ExportUiState(
     val error: String? = null
 )
 
-@HiltViewModel
-class ExportViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
+// Navigation 3 passes arguments to ViewModels via assisted injection of the
+// NavKey (see navigation-3 recipe "passingarguments/viewmodels/hilt"). The
+// `@HiltViewModel(assistedFactory = ...)` form lets us receive the
+// `Routes.Export` key and read `themeId` off it directly — there is no
+// `SavedStateHandle` populated with route args in Navigation 3.
+@HiltViewModel(assistedFactory = ExportViewModel.Factory::class)
+class ExportViewModel @AssistedInject constructor(
+    @Assisted private val navKey: Routes.Export,
     private val themeRepository: ThemeRepository,
     private val posterRenderer: PosterRenderer
 ) : ViewModel() {
 
-    val themeId: String = checkNotNull(savedStateHandle.get<String>("themeId")) {
-        "ExportViewModel requires a 'themeId' argument"
+    val themeId: String = navKey.themeId
+
+    @AssistedFactory
+    interface Factory {
+        fun create(navKey: Routes.Export): ExportViewModel
     }
 
     private val _uiState = MutableStateFlow(ExportUiState())

@@ -1,7 +1,6 @@
 package com.palettemuse.ui.export
 
 import android.content.Context
-import androidx.lifecycle.SavedStateHandle
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -10,6 +9,7 @@ import com.palettemuse.core.ColorNamer
 import com.palettemuse.core.PosterRenderer
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.ui.navigation.Routes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -21,7 +21,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -53,7 +52,7 @@ class ExportViewModelTest {
         repo.savePhotoToTheme(id, "/cap1.jpg", "#C99A92")
         repo.savePhotoToTheme(id, "/cap2.jpg", "#B98A82")
 
-        val vm = ExportViewModel(SavedStateHandle(mapOf("themeId" to id)), repo, renderer)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer)
         advanceUntilIdle()
 
         val state = vm.uiState.first { !it.isLoading }
@@ -69,7 +68,7 @@ class ExportViewModelTest {
 
     @Test fun selectTemplate_gridIsSelectable_othersEmitHint() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = ExportViewModel(SavedStateHandle(mapOf("themeId" to id)), repo, renderer)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer)
         advanceUntilIdle()
 
         // Non-Grid chip surfaces a SnackBar hint instead of switching.
@@ -87,29 +86,22 @@ class ExportViewModelTest {
     }
 
     @Test fun missingTheme_emitsError() = runTest(dispatcher) {
-        val vm = ExportViewModel(SavedStateHandle(mapOf("themeId" to "nope")), repo, renderer)
+        val vm = ExportViewModel(Routes.Export("nope"), repo, renderer)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
         assertNull(state.theme)
         assertEquals("主题不存在", state.error)
     }
 
-    @Test fun themeIdArgMissing_throws() {
-        // checkNotNull contract — constructor must fail fast on missing arg.
-        var threw = false
-        try {
-            ExportViewModel(SavedStateHandle(), repo, renderer)
-        } catch (_: IllegalStateException) {
-            threw = true
-        }
-        assertTrue(threw)
-    }
+    // Note: the `themeIdArgMissing_throws` test was removed — with the
+    // Navigation 3 assisted-injection refactor, themeId is always present on
+    // the Routes.Export NavKey, so there is no longer a missing-arg case.
 
     @Test fun selectedPhotos_cappedAtFour() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         repeat(6) { i -> repo.savePhotoToTheme(id, "/cap$i.jpg", "#C99A92") }
 
-        val vm = ExportViewModel(SavedStateHandle(mapOf("themeId" to id)), repo, renderer)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
         assertEquals(7, state.photos.size) // seed + 6 captures
