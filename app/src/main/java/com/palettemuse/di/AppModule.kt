@@ -28,7 +28,9 @@ object AppModule {
             context,
             AppDatabase::class.java,
             "palette_muse.db"
-        ).build()
+        )
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
