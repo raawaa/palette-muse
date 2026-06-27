@@ -45,6 +45,18 @@ kotlin {
     jvmToolchain(17)
 }
 
+// Room: export schemas for migration tests
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+// Mirror Room schemas into the androidTest assets so MigrationTestHelper can load them.
+android {
+    sourceSets.named("androidTest").configure {
+        assets.srcDirs("$projectDir/schemas")
+    }
+}
+
 dependencies {
   val composeBom = platform(libs.androidx.compose.bom)
   implementation(composeBom)
@@ -79,6 +91,7 @@ dependencies {
   androidTestImplementation(libs.androidx.test.ext.junit)
   androidTestImplementation(libs.androidx.test.runner)
   androidTestImplementation(libs.androidx.test.espresso.core)
+  androidTestImplementation(libs.room.testing)
   // Direct dep for runTest / advanceUntilIdle / StandardTestDispatcher
   // (transitive pull from androidx.test only surfaces a BOM constraint).
   androidTestImplementation(libs.kotlinx.coroutines.test)

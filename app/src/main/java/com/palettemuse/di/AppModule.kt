@@ -31,7 +31,7 @@ object AppModule {
             AppDatabase::class.java,
             "palette_muse.db"
         )
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            .addMigrations(AppDatabase.MIGRATION_2_3)
             .build()
     }
 
