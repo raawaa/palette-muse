@@ -63,4 +63,56 @@ class PosterRendererTest {
         val result = renderer.render(null, config)
         assertNotNull(result)
     }
+
+    @Test fun renderFilm_hasBorderStyle() {
+        val photos = List(4) { stubPhoto(Color.RED) }
+        val config = PosterRenderer.PosterConfig(
+            title = "Test Film",
+            template = PosterRenderer.TemplateType.FILM,
+            photos = photos
+        )
+        val result = renderer.render(null, config)
+        assertNotNull(result)
+        val pixel = result.getPixel(result.width / 2, (result.height * 0.9f).toInt())
+        assertEquals(0xFFF5F5F0.toInt(), pixel)
+    }
+
+    @Test fun renderJournal_backgroundIsWarmWhite() {
+        val photos = List(3) { stubPhoto(Color.GREEN) }
+        val config = PosterRenderer.PosterConfig(
+            title = "Test Journal",
+            template = PosterRenderer.TemplateType.JOURNAL,
+            photos = photos
+        )
+        val result = renderer.render(null, config)
+        assertNotNull(result)
+        val pixel = result.getPixel(result.width / 2, (result.height * 0.9f).toInt())
+        assertEquals(0xFFFAF8F5.toInt(), pixel)
+    }
+
+    @Test fun renderMinimal_backgroundIsCleanWhite() {
+        val photos = List(2) { stubPhoto(Color.YELLOW) }
+        val config = PosterRenderer.PosterConfig(
+            title = "Test Minimal",
+            template = PosterRenderer.TemplateType.MINIMAL,
+            photos = photos
+        )
+        val result = renderer.render(null, config)
+        assertNotNull(result)
+        val pixel = result.getPixel(result.width / 2, (result.height * 0.9f).toInt())
+        assertEquals(android.graphics.Color.WHITE, pixel)
+    }
+
+    @Test fun renderGrid_backgroundIsWhite() {
+        val photos = List(4) { stubPhoto(Color.RED) }
+        val config = PosterRenderer.PosterConfig(
+            title = "Test Grid",
+            template = PosterRenderer.TemplateType.GRID,
+            photos = photos
+        )
+        val result = renderer.render(null, config)
+        assertNotNull(result)
+        val pixel = result.getPixel(result.width / 2, (result.height * 0.9f).toInt())
+        assertEquals(android.graphics.Color.WHITE, pixel)
+    }
 }

@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Typeface
 import android.graphics.RectF
 import android.net.Uri
 import android.os.Build
@@ -117,22 +118,44 @@ class PosterRenderer @Inject constructor() {
     }
 
     private fun drawTitleAndPalette(canvas: Canvas, config: PosterConfig, w: Int, h: Int) {
-        // 标题 + 色板 (在底部, Plan 2 已有)
+        val template = config.template
+        val (bg, textColor, textSize, swatchSize) = when (template) {
+            TemplateType.GRID -> Quad(Color.WHITE, Color.BLACK, 64f, 40f)
+            TemplateType.FILM -> Quad(0xFFF5F5F0.toInt(), 0xFF2C2C2C.toInt(), 48f, 18f)
+            TemplateType.JOURNAL -> Quad(0xFFFAF8F5.toInt(), 0xFF8B7355.toInt(), 56f, 24f)
+            TemplateType.MINIMAL -> Quad(Color.WHITE, 0xFF333333.toInt(), 36f, 16f)
+        }
+        // draw background strip at bottom
+        val bgPaint = Paint().apply { color = bg; style = Paint.Style.FILL }
+        canvas.drawRect(0f, h * 0.85f, w.toFloat(), h.toFloat(), bgPaint)
+        // draw title
         val textPaint = Paint().apply {
-            color = Color.BLACK
-            textSize = 64f
+            color = textColor
+            this.textSize = textSize
             isAntiAlias = true
+            typeface = if (template == TemplateType.JOURNAL) Typeface.create(Typeface.SERIF, Typeface.ITALIC) else Typeface.create(Typeface.SERIF, Typeface.NORMAL)
         }
         canvas.drawText(config.title, 40f, h * 0.95f, textPaint)
+        // draw palette
         val palette = listOf(config.primaryColor, config.secondaryColor, config.accentColor)
-        val swatchSize = 40f
         val swatchY = h * 0.88f
+        val swatchPaint = Paint().apply { style = Paint.Style.FILL; isAntiAlias = true }
+        val borderPaint = if (template == TemplateType.FILM) {
+            Paint().apply { style = Paint.Style.STROKE; strokeWidth = 1f; color = Color.BLACK; isAntiAlias = true }
+        } else null
         palette.forEachIndexed { i, c ->
             val left = 40f + i * (swatchSize + 8f)
-            canvas.drawRect(left, swatchY, left + swatchSize, swatchY + swatchSize,
-                Paint().apply { this.color = c; isAntiAlias = true })
+            swatchPaint.color = c
+            if (template == TemplateType.JOURNAL) {
+                canvas.drawRoundRect(left, swatchY, left + swatchSize, swatchY + swatchSize, 8f, 8f, swatchPaint)
+            } else {
+                canvas.drawRect(left, swatchY, left + swatchSize, swatchY + swatchSize, swatchPaint)
+            }
+            borderPaint?.let { canvas.drawRect(left, swatchY, left + swatchSize, swatchY + swatchSize, it) }
         }
     }
+
+    private data class Quad(val bg: Int, val textColor: Int, val textSize: Float, val swatchSize: Float)
 
     /**
      * 保存海报到相册并返回分享 URI
