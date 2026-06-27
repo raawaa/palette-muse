@@ -29,7 +29,7 @@ object Routes {
     data class Analyze(val projectId: String) : NavKey
 
     @Serializable
-    data class Export(val projectId: String) : NavKey
+    data class Export(val themeId: String) : NavKey
 }
 
 @Composable
@@ -80,7 +80,6 @@ fun PaletteMuseNavGraph() {
             }
             entry<Routes.Export> { key ->
                 ExportScreen(
-                    projectId = key.projectId,
                     onBack = { backStack.removeLastOrNull() }
                 )
             }
