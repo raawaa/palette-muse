@@ -9,6 +9,7 @@ import com.palettemuse.data.model.ThemeEntity
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
@@ -19,6 +20,7 @@ data class ThemeWithPhotos(
     val palette: List<String>
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class ThemeRepository @Inject constructor(
     private val themeDao: ThemeDao,

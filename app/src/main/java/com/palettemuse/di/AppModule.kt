@@ -14,7 +14,6 @@ import com.palettemuse.data.local.ThemeDao
 import com.palettemuse.data.repository.InternalPhotoStorage
 import com.palettemuse.data.repository.PhotoStorage
 import com.palettemuse.data.repository.ProjectRepository
-import com.palettemuse.data.repository.ThemeRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -87,15 +86,6 @@ object AppModule {
 
     @Provides
     fun providePhotoDao(database: AppDatabase): PhotoDao = database.photoDao()
-
-    @Provides
-    @Singleton
-    fun provideThemeRepository(
-        themeDao: ThemeDao,
-        photoDao: PhotoDao,
-        colorMatcher: ColorMatcher,
-        colorNamer: ColorNamer
-    ): ThemeRepository = ThemeRepository(themeDao, photoDao, colorMatcher, colorNamer)
 }
 
 @Module
