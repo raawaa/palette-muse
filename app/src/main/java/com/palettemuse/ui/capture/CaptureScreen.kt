@@ -44,6 +44,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -84,8 +86,8 @@ fun CaptureScreen(
     val cameraManager = remember { CameraManager() }
     var hasCameraPermission by remember { mutableStateOf(false) }
     // One-shot flag for capture failure feedback (consumed by the Snackbar LaunchedEffect below).
-    val captureError = remember { androidx.compose.runtime.mutableStateOf(false) }
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val captureError = remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -152,7 +154,7 @@ fun CaptureScreen(
                     onClick = onBack
                 )
 
-                // Target color pill
+                // Target color pill — shows the live target theme + match percentage.
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(9999.dp))
@@ -170,19 +172,12 @@ fun CaptureScreen(
                                 color = Color(0xFF524345)
                             )
                             Text(
-                                text = "Rose Gold",
+                                text = "${uiState.targetTheme.name} ${uiState.targetTheme.matchPct}% Match",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = RoseGold
                             )
                         }
-                        Box(
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-                                .background(Color(android.graphics.Color.parseColor("#B76E79")))
-                        )
                     }
                 }
 
@@ -194,30 +189,9 @@ fun CaptureScreen(
             }
         }
 
-        // === Layer 4: Live match percentage ===
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Box(
-                modifier = Modifier
-                    .offset(y = (-80).dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.6f))
-                    .border(0.5.dp, Color.White.copy(alpha = 0.8f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Default.Palette, contentDescription = null, tint = RoseGold, modifier = Modifier.size(20.dp))
-                    Text(
-                        text = "${uiState.matchPercentage}% Match",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = RoseGold
-                    )
-                }
-            }
-        }
+        // === Layer 4 (removed): standalone Live match percentage Box — the
+        // TARGET pill above now carries the same info, so the redundant badge
+        // (always showing "0% Match" before Plan 3) is dropped.
 
         // === Layer 5: Bottom gradient overlay ===
         Box(
@@ -309,7 +283,7 @@ fun CaptureScreen(
         }
 
         // === Layer 8: Capture failure feedback (Snackbar) ===
-        androidx.compose.material3.SnackbarHost(
+        SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
