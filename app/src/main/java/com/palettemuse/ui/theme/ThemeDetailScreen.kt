@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
 import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -337,12 +338,14 @@ private fun HeroOrigin(photo: PhotoEntity) {
             .clip(RoundedCornerShape(Dimens.cardCorner))
             .background(OutlineVariant)
     ) {
-        AsyncImage(
-            model = photo.imagePath,
-            contentDescription = "主题起点",
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop
-        )
+        if (!photo.imagePath.isBlank()) {
+            AsyncImage(
+                model = photo.imagePath,
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
+        }
 
         // Top-left glass pill — 主题起点 (star icon + label)
         Row(
@@ -392,12 +395,14 @@ private fun CaptureCard(photo: PhotoEntity) {
             .clip(RoundedCornerShape(Dimens.imageCorner))
             .background(OutlineVariant)
     ) {
-        AsyncImage(
-            model = photo.imagePath,
-            contentDescription = photo.dominantHex,
-            modifier = Modifier.fillMaxWidth(),
-            contentScale = ContentScale.Crop
-        )
+        if (!photo.imagePath.isBlank()) {
+            AsyncImage(
+                model = photo.imagePath,
+                contentDescription = photo.dominantHex,
+                modifier = Modifier.fillMaxWidth(),
+                contentScale = ContentScale.Crop
+            )
+        }
     }
 }
 
@@ -447,5 +452,4 @@ private fun ExportPill(
 // Staggered grid span helper — full line span for header / hero items
 // ===================================================================
 
-@Suppress("ktlint:standard:function-naming")
-private fun fullLineSpan() = androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan.FullLine
+private fun fullLineSpan() = StaggeredGridItemSpan.FullLine
