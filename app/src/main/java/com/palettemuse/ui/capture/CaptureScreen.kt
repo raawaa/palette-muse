@@ -42,17 +42,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -79,8 +82,9 @@ fun CaptureScreen(
     onBack: () -> Unit,
     viewModel: CaptureViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val cameraManager = remember { CameraManager() }
     var hasCameraPermission by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -100,7 +104,7 @@ fun CaptureScreen(
         // === Layer 1: Camera viewfinder ===
         if (hasCameraPermission) {
             CameraPreview(
-                cameraManager = remember { CameraManager() },
+                cameraManager = cameraManager,
                 lensFacing = uiState.lensFacing,
                 onFrameAnalyzed = { pixels, width, height ->
                     viewModel.onFrameAnalyzed(pixels, width, height)
@@ -328,7 +332,14 @@ fun CaptureScreen(
                         .size(80.dp)
                         .clip(CircleShape)
                         .background(Color.White.copy(alpha = 0.2f))
-                        .padding(8.dp),
+                        .padding(8.dp)
+                        .clickable {
+                            cameraManager.takePhoto(
+                                context,
+                                onPhotoTaken = { bmp -> viewModel.capturePhoto(bmp) },
+                                onError = { /* TODO Plan 2: 错误提示 */ }
+                            )
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
@@ -349,6 +360,18 @@ fun CaptureScreen(
                 GlassCircleButton(
                     icon = { Icon(Icons.Default.Tune, contentDescription = "Tune", tint = Color(0xFF1C1B1B)) },
                     onClick = {}
+                )
+            }
+        }
+
+        // === Layer 7: Post-capture confirmation sheet ===
+        uiState.pendingCapture?.let { pending ->
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                CaptureConfirmSheet(
+                    pending = pending,
+                    onConfirm = viewModel::confirmCapture,
+                    onSaveAsNew = viewModel::saveAsNewTheme,
+                    onDismiss = viewModel::dismissPending
                 )
             }
         }
@@ -459,4 +482,34 @@ fun CameraPreview(
         },
         modifier = Modifier.fillMaxSize()
     )
+}
+
+@Composable
+fun CaptureConfirmSheet(
+    pending: PendingCapture,
+    onConfirm: () -> Unit,
+    onSaveAsNew: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val themeName = pending.matchedTheme?.name ?: "新主题"
+    val action = if (pending.matchedTheme != null) "归入【$themeName】？" else "为这个颜色创建新主题？"
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color(0xFFFCF9F8).copy(alpha = 0.9f))
+            .padding(20.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Text(action, color = Color(0xFF8A4853), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Button(
+                    onClick = onConfirm,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF8A4853))
+                ) { Text("确认", color = Color.White) }
+                OutlinedButton(onClick = onSaveAsNew, modifier = Modifier.weight(1f)) { Text("另起新主题") }
+            }
+        }
+    }
 }
