@@ -13,3 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Transient verification screenshots from CLI sessions
+/audit_*.png
+/run_screenshot.png
