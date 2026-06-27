@@ -8,8 +8,11 @@ import com.palettemuse.core.ColorNamer
 import com.palettemuse.core.PosterRenderer
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.local.ColorPaletteDao
+import com.palettemuse.data.local.PhotoDao
 import com.palettemuse.data.local.ProjectDao
+import com.palettemuse.data.local.ThemeDao
 import com.palettemuse.data.repository.ProjectRepository
+import com.palettemuse.data.repository.ThemeRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -75,4 +78,19 @@ object AppModule {
     fun providePosterRenderer(): PosterRenderer {
         return PosterRenderer()
     }
+
+    @Provides
+    fun provideThemeDao(database: AppDatabase): ThemeDao = database.themeDao()
+
+    @Provides
+    fun providePhotoDao(database: AppDatabase): PhotoDao = database.photoDao()
+
+    @Provides
+    @Singleton
+    fun provideThemeRepository(
+        themeDao: ThemeDao,
+        photoDao: PhotoDao,
+        colorMatcher: ColorMatcher,
+        colorNamer: ColorNamer
+    ): ThemeRepository = ThemeRepository(themeDao, photoDao, colorMatcher, colorNamer)
 }
