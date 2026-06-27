@@ -49,26 +49,21 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.palettemuse.data.repository.ThemeWithPhotos
 import com.palettemuse.theme.Dimens
+import com.palettemuse.theme.OnSurface
+import com.palettemuse.theme.OnSurfaceVariant
+import com.palettemuse.theme.OutlineVariant
 import com.palettemuse.theme.PlayfairDisplay
 import com.palettemuse.theme.PlusJakartaSans
+import com.palettemuse.theme.PrimaryDesign
 import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.SurfaceContainer
 import com.palettemuse.theme.SurfaceLow
+import com.palettemuse.theme.SurfaceTint
 import com.palettemuse.theme.SurfaceWhite
+import com.palettemuse.theme.TertiaryFixedDim
 import com.palettemuse.theme.glassmorphicBackground
 
-// ===================================================================
-// Aura Aesthetic color tokens (from Stitch design HTML)
-// surface: #FCF9F8 | on-surface: #1C1B1B | on-surface-variant: #524345
-// primary: #8A4853 | surface-tint: #8C4B55 | outline-variant: #D7C1C3
-// ===================================================================
-private val PrimaryDesign = Color(0xFF8A4853)
-private val SurfaceTint = Color(0xFF8C4B55)
-private val OnSurface = Color(0xFF1C1B1B)
-private val OnSurfaceVariant = Color(0xFF524345)
-private val OutlineVariant = Color(0xFFD7C1C3)
-private val SurfaceContainerHighest = Color(0xFFE5E2E1)
-private val TertiaryFixedDim = Color(0xFFC8C6C3)
+// Aura Aesthetic color tokens now live in theme/Color.kt (shared across screens).
 
 /** Parses a hex string ("#RRGGBB") into a Compose Color, falling back to rose gold. */
 private fun parseHex(hex: String): Color = runCatching {
@@ -201,12 +196,14 @@ fun HomeScreen(
                 }
             }
 
-            // ---- Empty state card (shows when no themes OR always as "new collection" prompt) ----
-            item {
-                EmptyStateCard(
-                    modifier = Modifier.padding(horizontal = Dimens.containerMargin),
-                    onClick = onNavigateToCapture
-                )
+            // ---- Empty state card (only when not loading and no themes) ----
+            if (!uiState.isLoading && uiState.themes.isEmpty()) {
+                item {
+                    EmptyStateCard(
+                        modifier = Modifier.padding(horizontal = Dimens.containerMargin),
+                        onClick = onNavigateToCapture
+                    )
+                }
             }
         }
 
@@ -236,13 +233,13 @@ private fun ThemeCard(
         modifier = modifier
             .fillMaxWidth()
             .height(256.dp)
-            .clip(RoundedCornerShape(Dimens.cardCorner))
             .shadow(
                 elevation = 20.dp,
                 shape = RoundedCornerShape(Dimens.cardCorner),
                 ambientColor = RoseGold.copy(alpha = 0.06f),
                 spotColor = RoseGold.copy(alpha = 0.08f)
             )
+            .clip(RoundedCornerShape(Dimens.cardCorner))
             .background(SurfaceContainer)
             .clickable(onClick = onClick)
     ) {
@@ -467,18 +464,18 @@ private fun BottomNav(
                 .align(Alignment.TopCenter)
                 .padding(bottom = 24.dp) // lift above bar (-top-6 equivalent)
                 .size(64.dp)
+                .shadow(
+                    elevation = 12.dp,
+                    shape = CircleShape,
+                    ambientColor = RoseGold.copy(alpha = 0.2f),
+                    spotColor = RoseGold.copy(alpha = 0.3f)
+                )
                 .clip(CircleShape)
                 .border(4.dp, SurfaceWhite, CircleShape)
                 .background(
                     Brush.linearGradient(
                         colors = listOf(PrimaryDesign, SurfaceTint)
                     )
-                )
-                .shadow(
-                    elevation = 12.dp,
-                    shape = CircleShape,
-                    ambientColor = RoseGold.copy(alpha = 0.2f),
-                    spotColor = RoseGold.copy(alpha = 0.3f)
                 )
                 .clickable(onClick = onCapture),
             contentAlignment = Alignment.Center

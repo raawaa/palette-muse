@@ -10,7 +10,6 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 
 data class HomeUiState(
     val themes: List<ThemeWithPhotos> = emptyList(),
@@ -26,8 +25,4 @@ class HomeViewModel @Inject constructor(
         themeRepository.getAllThemesWithPhotos()
             .map { themes -> HomeUiState(themes = themes, isLoading = false) }
             .stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
-
-    fun deleteTheme(themeId: String) {
-        viewModelScope.launch { themeRepository.deleteTheme(themeId) }
-    }
 }
