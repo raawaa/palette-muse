@@ -31,6 +31,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -64,6 +67,7 @@ import com.palettemuse.theme.PrimaryDesign
 import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.SurfaceWhite
 import com.palettemuse.theme.glassmorphicBackground
+import kotlinx.coroutines.launch
 
 // Aura Aesthetic color tokens are imported from theme/Color.kt — do not redefine here.
 
@@ -163,6 +167,10 @@ private fun ThemeDetailContent(
     val gridPhotos = if (heroPhoto != null) photos.filter { it.id != heroPhoto.id } else photos
 
     var menuExpanded by remember { mutableStateOf(false) }
+
+    // Snackbar for "coming soon" hints on rename / recolor (data-destructive actions are deferred to Plan 3).
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalStaggeredGrid(
@@ -284,18 +292,25 @@ private fun ThemeDetailContent(
                     expanded = menuExpanded,
                     onDismissRequest = { menuExpanded = false }
                 ) {
+                    // Rename / recolor intentionally show a "coming soon" snackbar instead of
+                    // mutating data with placeholder values (Plan 3 will add real dialogs that
+                    // call onRename / onUpdateColor with user-provided input).
                     DropdownMenuItem(
                         text = { Text("重命名", fontFamily = PlusJakartaSans) },
                         onClick = {
                             menuExpanded = false
-                            onRename("新主题") // MVP: simple rename hook; UI dialog deferred
+                            scope.launch {
+                                snackbarHostState.showSnackbar("重命名功能即将推出")
+                            }
                         }
                     )
                     DropdownMenuItem(
                         text = { Text("改主题色", fontFamily = PlusJakartaSans) },
                         onClick = {
                             menuExpanded = false
-                            onUpdateColor(theme.representativeHex) // MVP: hook only
+                            scope.launch {
+                                snackbarHostState.showSnackbar("改色功能即将推出")
+                            }
                         }
                     )
                     DropdownMenuItem(
@@ -315,6 +330,14 @@ private fun ThemeDetailContent(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = Dimens.containerMargin, bottom = Dimens.stackLg)
+        )
+
+        // ===== Snackbar host (bottom-center, clears Export pill) =====
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = Dimens.stackLg)
         )
     }
 }

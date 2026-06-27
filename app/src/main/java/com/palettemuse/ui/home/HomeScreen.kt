@@ -97,40 +97,11 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                top = 0.dp,
+                top = 88.dp, // clearance for the fixed TopAppBar overlay (status bar + appbar)
                 bottom = 140.dp // reserve for FAB + bottom nav
             ),
             verticalArrangement = Arrangement.spacedBy(Dimens.stackMd)
         ) {
-            // ---- TopAppBar (sticky-like at top of list) ----
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .glassmorphicBackground()
-                        .statusBarsPadding()
-                        .padding(horizontal = Dimens.containerMargin, vertical = Dimens.stackMd),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        Icons.Default.Menu,
-                        contentDescription = "Menu",
-                        tint = PrimaryDesign
-                    )
-                    Text(
-                        text = "PALETTE MUSE",
-                        fontFamily = PlayfairDisplay,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        color = PrimaryDesign,
-                        letterSpacing = 0.2.sp * 10f // tracking 0.2em approximation
-                    )
-                    // Search button intentionally removed per brief decision.
-                    Spacer(Modifier.width(24.dp))
-                }
-            }
-
             // ---- Hero ----
             item {
                 Column(
@@ -205,6 +176,34 @@ fun HomeScreen(
                     )
                 }
             }
+        }
+
+        // ===== TopAppBar (fixed glassmorphic overlay — does not scroll with LazyColumn) =====
+        Row(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .glassmorphicBackground()
+                .statusBarsPadding()
+                .padding(horizontal = Dimens.containerMargin, vertical = Dimens.stackMd),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                Icons.Default.Menu,
+                contentDescription = "Menu",
+                tint = PrimaryDesign
+            )
+            Text(
+                text = "PALETTE MUSE",
+                fontFamily = PlayfairDisplay,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                color = PrimaryDesign,
+                letterSpacing = 0.2.sp * 10f // tracking 0.2em approximation
+            )
+            // Search button intentionally removed per brief decision.
+            Spacer(Modifier.width(24.dp))
         }
 
         // ===== Bottom Navigation Bar =====
