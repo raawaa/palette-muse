@@ -60,16 +60,14 @@ fun PaletteMuseNavGraph() {
             entry<Routes.Home> {
                 HomeScreen(
                     onNavigateToCapture = { backStack.add(Routes.Capture) },
-                    // HomeScreen keeps its onNavigateToAnalyze(themeId) signature from Task 1;
-                    // the lambda body now routes into ThemeDetail.
-                    onNavigateToAnalyze = { themeId ->
+                    onNavigateToThemeDetail = { themeId ->
                         backStack.add(Routes.ThemeDetail(themeId))
                     }
                 )
             }
             entry<Routes.Capture> {
                 CaptureScreen(
-                    onNavigateToAnalyze = { themeId ->
+                    onNavigateToThemeDetail = { themeId ->
                         backStack.removeAll { it !is Routes.Home }
                         backStack.add(Routes.ThemeDetail(themeId))
                     },

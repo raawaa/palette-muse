@@ -78,7 +78,7 @@ import com.palettemuse.theme.RoseGold
 
 @Composable
 fun CaptureScreen(
-    onNavigateToAnalyze: (String) -> Unit,
+    onNavigateToThemeDetail: (String) -> Unit,
     onBack: () -> Unit,
     viewModel: CaptureViewModel = hiltViewModel()
 ) {

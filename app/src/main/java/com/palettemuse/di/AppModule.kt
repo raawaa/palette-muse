@@ -7,13 +7,10 @@ import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
 import com.palettemuse.core.PosterRenderer
 import com.palettemuse.data.local.AppDatabase
-import com.palettemuse.data.local.ColorPaletteDao
 import com.palettemuse.data.local.PhotoDao
-import com.palettemuse.data.local.ProjectDao
 import com.palettemuse.data.local.ThemeDao
 import com.palettemuse.data.repository.InternalPhotoStorage
 import com.palettemuse.data.repository.PhotoStorage
-import com.palettemuse.data.repository.ProjectRepository
 import dagger.Binds
 import dagger.Module
 import dagger.Provides
@@ -34,27 +31,8 @@ object AppModule {
             AppDatabase::class.java,
             "palette_muse.db"
         )
-            .fallbackToDestructiveMigration()
+            .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
-    }
-
-    @Provides
-    fun provideProjectDao(database: AppDatabase): ProjectDao {
-        return database.projectDao()
-    }
-
-    @Provides
-    fun provideColorPaletteDao(database: AppDatabase): ColorPaletteDao {
-        return database.colorPaletteDao()
-    }
-
-    @Provides
-    @Singleton
-    fun provideProjectRepository(
-        projectDao: ProjectDao,
-        colorPaletteDao: ColorPaletteDao
-    ): ProjectRepository {
-        return ProjectRepository(projectDao, colorPaletteDao)
     }
 
     @Provides

@@ -83,7 +83,7 @@ private fun relativeTimeLabel(epoch: Long): String {
 @Composable
 fun HomeScreen(
     onNavigateToCapture: () -> Unit,
-    onNavigateToAnalyze: (String) -> Unit,
+    onNavigateToThemeDetail: (String) -> Unit,
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -190,7 +190,7 @@ fun HomeScreen(
                 items(uiState.themes, key = { it.theme.id }) { themeWithPhotos ->
                     ThemeCard(
                         themeWithPhotos = themeWithPhotos,
-                        onClick = { onNavigateToAnalyze(themeWithPhotos.theme.id) },
+                        onClick = { onNavigateToThemeDetail(themeWithPhotos.theme.id) },
                         modifier = Modifier.padding(horizontal = Dimens.containerMargin)
                     )
                 }
