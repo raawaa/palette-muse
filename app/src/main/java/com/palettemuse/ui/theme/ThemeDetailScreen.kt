@@ -43,7 +43,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,7 +69,6 @@ import com.palettemuse.theme.PrimaryDesign
 import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.SurfaceWhite
 import com.palettemuse.theme.glassmorphicBackground
-import kotlinx.coroutines.launch
 
 // Aura Aesthetic color tokens are imported from theme/Color.kt — do not redefine here.
 
@@ -148,6 +146,7 @@ fun ThemeDetailScreen(
             else -> {
                 ThemeDetailContent(
                     state = uiState.data!!,
+                    error = uiState.error,
                     onExport = { onNavigateToExport(viewModel.themeId) },
                     onRename = viewModel::renameTheme,
                     onUpdateColor = viewModel::updateThemeColor,
@@ -166,6 +165,7 @@ fun ThemeDetailScreen(
 @Composable
 private fun ThemeDetailContent(
     state: ThemeWithPhotos,
+    error: String?,
     onExport: () -> Unit,
     onRename: (String) -> Unit,
     onUpdateColor: (String) -> Unit,
@@ -184,9 +184,12 @@ private fun ThemeDetailContent(
     var showRename by remember { mutableStateOf(false) }
     var showColor by remember { mutableStateOf(false) }
 
-    // Snackbar for "coming soon" hints on rename / recolor (data-destructive actions are deferred to Plan 3).
+    // Snackbar for rename / recolor feedback and error messages.
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(error) {
+        error?.let { snackbarHostState.showSnackbar(it) }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyVerticalStaggeredGrid(

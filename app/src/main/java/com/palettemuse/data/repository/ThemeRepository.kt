@@ -103,13 +103,11 @@ class ThemeRepository @Inject constructor(
     }
 
     suspend fun renameTheme(id: String, name: String) {
-        themeDao.getTheme(id)?.let { themeDao.update(it.copy(name = name, updatedAt = System.currentTimeMillis())) }
+        themeDao.rename(id, name, System.currentTimeMillis())
     }
 
     suspend fun updateThemeColor(id: String, newHex: String) {
-        themeDao.getTheme(id)?.let {
-            themeDao.update(it.copy(representativeHex = newHex, updatedAt = System.currentTimeMillis()))
-        }
+        themeDao.updateColor(id, newHex, System.currentTimeMillis())
     }
 
     suspend fun deleteTheme(id: String) = themeDao.deleteById(id)
