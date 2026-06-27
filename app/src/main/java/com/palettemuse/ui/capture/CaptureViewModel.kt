@@ -51,6 +51,7 @@ class CaptureViewModel @Inject constructor(
     }
 
     fun onFrameAnalyzed(pixels: IntArray, width: Int, height: Int) {
+        if (_themes.value.isEmpty()) return // 等待 themes 缓存就绪 (首帧 themes 可能未加载)
         val sampleHex = colorMatcher.extractCenterAverageColor(pixels, width, height)
         val themes = _themes.value
         val best = themes

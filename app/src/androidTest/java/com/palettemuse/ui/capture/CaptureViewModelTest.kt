@@ -115,4 +115,15 @@ class CaptureViewModelTest {
         assertEquals("Rose Gold", target.name)
         assertEquals(0, target.matchPct)
     }
+
+    @Test
+    fun onFrameAnalyzed_skipsWhenNoThemes() = runTest(dispatcher) {
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        advanceUntilIdle() // init collect completes (empty _themes)
+        val before = vm.uiState.value.targetTheme
+        val pixels = IntArray(100) { 0xFFDCA8A6.toInt() }
+        vm.onFrameAnalyzed(pixels, 10, 10)
+        advanceUntilIdle()
+        assertEquals(before, vm.uiState.value.targetTheme) // unchanged (skipped)
+    }
 }
