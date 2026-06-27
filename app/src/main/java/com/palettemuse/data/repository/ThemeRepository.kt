@@ -84,6 +84,17 @@ class ThemeRepository @Inject constructor(
             }
         }
 
+    /**
+     * Loads a single theme together with its photos and built palette.
+     * Used by ThemeDetailScreen to render the palette header + Hero + masonry grid.
+     * Returns null when the theme id does not exist.
+     */
+    suspend fun getThemeWithPhotos(id: String): ThemeWithPhotos? {
+        val theme = themeDao.getTheme(id) ?: return null
+        val photos = photoDao.getPhotosForThemeOnce(id)
+        return ThemeWithPhotos(theme, photos, buildPalette(theme, photos))
+    }
+
     suspend fun renameTheme(id: String, name: String) {
         themeDao.getTheme(id)?.let { themeDao.update(it.copy(name = name, updatedAt = System.currentTimeMillis())) }
     }
