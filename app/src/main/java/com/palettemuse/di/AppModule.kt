@@ -11,8 +11,11 @@ import com.palettemuse.data.local.ColorPaletteDao
 import com.palettemuse.data.local.PhotoDao
 import com.palettemuse.data.local.ProjectDao
 import com.palettemuse.data.local.ThemeDao
+import com.palettemuse.data.repository.InternalPhotoStorage
+import com.palettemuse.data.repository.PhotoStorage
 import com.palettemuse.data.repository.ProjectRepository
 import com.palettemuse.data.repository.ThemeRepository
+import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -93,4 +96,12 @@ object AppModule {
         colorMatcher: ColorMatcher,
         colorNamer: ColorNamer
     ): ThemeRepository = ThemeRepository(themeDao, photoDao, colorMatcher, colorNamer)
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+abstract class PhotoStorageModule {
+    @Binds
+    @Singleton
+    abstract fun bindPhotoStorage(impl: InternalPhotoStorage): PhotoStorage
 }

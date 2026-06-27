@@ -158,7 +158,7 @@ fun CaptureScreen(
                                 color = Color(0xFF524345)
                             )
                             Text(
-                                text = uiState.targetColorName,
+                                text = "Rose Gold",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = RoseGold
@@ -169,7 +169,7 @@ fun CaptureScreen(
                                 .size(32.dp)
                                 .clip(CircleShape)
                                 .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-                                .background(Color(android.graphics.Color.parseColor(uiState.targetColor)))
+                                .background(Color(android.graphics.Color.parseColor("#B76E79")))
                         )
                     }
                 }

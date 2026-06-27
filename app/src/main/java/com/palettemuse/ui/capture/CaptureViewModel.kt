@@ -1,36 +1,19 @@
 package com.palettemuse.ui.capture
 
-import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.camera.core.CameraSelector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.ColorAnalyzer
 import com.palettemuse.core.ColorMatcher
-import com.palettemuse.core.ColorNamer
-import com.palettemuse.data.model.ColorPaletteEntity
-import com.palettemuse.data.model.ColorRole
-import com.palettemuse.data.repository.ProjectRepository
+import com.palettemuse.data.model.ThemeEntity
+import com.palettemuse.data.repository.PhotoStorage
+import com.palettemuse.data.repository.ThemeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
-import java.util.UUID
-import javax.inject.Inject
-
-data class CaptureUiState(
-    val matchPercentage: Int = 0,
-    val targetColor: String = "#B76E79",
-    val targetColorName: String = "Rose Gold",
-    val capturedSwatches: List<CapturedSwatch> = emptyList(),
-    val lensFacing: Int = CameraSelector.LENS_FACING_BACK,
-    val isAnalyzing: Boolean = false
-)
 
 data class CapturedSwatch(
     val hexColor: String,
@@ -38,84 +21,69 @@ data class CapturedSwatch(
     val matchPercentage: Int
 )
 
+data class PendingCapture(
+    val imagePath: String,
+    val dominantHex: String,
+    val matchedTheme: ThemeEntity?
+)
+
+data class CaptureUiState(
+    val matchPercentage: Int = 0,
+    val capturedSwatches: List<CapturedSwatch> = emptyList(),
+    val lensFacing: Int = CameraSelector.LENS_FACING_BACK,
+    val isAnalyzing: Boolean = false,
+    val pendingCapture: PendingCapture? = null
+)
+
 @HiltViewModel
 class CaptureViewModel @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val projectRepository: ProjectRepository,
+    private val themeRepository: ThemeRepository,
     private val colorAnalyzer: ColorAnalyzer,
-    private val colorNamer: ColorNamer,
+    private val photoStorage: PhotoStorage,
     private val colorMatcher: ColorMatcher
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CaptureUiState())
     val uiState: StateFlow<CaptureUiState> = _uiState.asStateFlow()
 
-    // 由 CameraManager 每帧调用
     fun onFrameAnalyzed(pixels: IntArray, width: Int, height: Int) {
         val sampleHex = colorMatcher.extractCenterAverageColor(pixels, width, height)
-        val match = colorMatcher.matchPercentage(_uiState.value.targetColor, sampleHex)
-        _uiState.value = _uiState.value.copy(matchPercentage = match)
+        _uiState.value = _uiState.value.copy(
+            matchPercentage = colorMatcher.matchPercentage("#B76E79", sampleHex)
+        )
     }
 
-    fun capturePhoto(photoBitmap: Bitmap, onSaved: (String) -> Unit) {
+    fun capturePhoto(bitmap: android.graphics.Bitmap) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isAnalyzing = true)
-
-            // 保存图片到 App 内部存储
-            val imagePath = saveImageToInternalStorage(photoBitmap)
-
-            // 分析颜色
-            val result = colorAnalyzer.analyze(photoBitmap)
-            val targetMatch = colorMatcher.matchPercentage(
-                _uiState.value.targetColor,
-                result.primaryHex ?: "#808080"
-            )
-
-            val projectId = UUID.randomUUID().toString()
-            val palettes = listOfNotNull(
-                result.primaryHex?.let {
-                    ColorPaletteEntity(
-                        id = UUID.randomUUID().toString(),
-                        projectId = projectId,
-                        role = ColorRole.PRIMARY,
-                        hexColor = it,
-                        semanticName = colorNamer.nameColor(it),
-                        matchPercentage = targetMatch
-                    )
-                },
-                result.secondaryHex?.let {
-                    ColorPaletteEntity(
-                        id = UUID.randomUUID().toString(),
-                        projectId = projectId,
-                        role = ColorRole.SECONDARY,
-                        hexColor = it,
-                        semanticName = colorNamer.nameColor(it)
-                    )
-                },
-                result.accentHex?.let {
-                    ColorPaletteEntity(
-                        id = UUID.randomUUID().toString(),
-                        projectId = projectId,
-                        role = ColorRole.ACCENT,
-                        hexColor = it,
-                        semanticName = colorNamer.nameColor(it)
-                    )
-                }
-            )
-
-            // 添加到临时色样列表
-            val primaryHex = result.primaryHex ?: "#808080"
-            val swatch = CapturedSwatch(
-                hexColor = primaryHex,
-                semanticName = colorNamer.nameColor(primaryHex),
-                matchPercentage = targetMatch
-            )
+            val imagePath = photoStorage.save(bitmap)
+            val dominantHex = colorAnalyzer.extractDominantHex(bitmap)
+            val matched = themeRepository.findMatchingTheme(dominantHex)
             _uiState.value = _uiState.value.copy(
-                capturedSwatches = _uiState.value.capturedSwatches + swatch,
-                isAnalyzing = false
+                isAnalyzing = false,
+                pendingCapture = PendingCapture(imagePath, dominantHex, matched)
             )
+        }
+    }
 
-            onSaved(projectId)
+    fun confirmCapture() {
+        val pending = _uiState.value.pendingCapture ?: return
+        viewModelScope.launch {
+            val matched = pending.matchedTheme
+            if (matched != null) {
+                themeRepository.savePhotoToTheme(matched.id, pending.imagePath, pending.dominantHex)
+            } else {
+                themeRepository.createThemeAndSave(pending.imagePath, pending.dominantHex)
+            }
+            _uiState.value = _uiState.value.copy(pendingCapture = null)
+        }
+    }
+
+    fun saveAsNewTheme() {
+        val pending = _uiState.value.pendingCapture ?: return
+        viewModelScope.launch {
+            themeRepository.createThemeAndSave(pending.imagePath, pending.dominantHex)
+            _uiState.value = _uiState.value.copy(pendingCapture = null)
         }
     }
 
@@ -126,13 +94,12 @@ class CaptureViewModel @Inject constructor(
         )
     }
 
-    private fun saveImageToInternalStorage(bitmap: Bitmap): String {
-        val file = File(context.filesDir, "captures")
-        file.mkdirs()
-        val imageFile = File(file, "capture_${System.currentTimeMillis()}.jpg")
-        FileOutputStream(imageFile).use { fos ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
-        }
-        return imageFile.absolutePath
+    fun dismissPending() {
+        _uiState.value = _uiState.value.copy(pendingCapture = null)
+    }
+
+    @androidx.annotation.VisibleForTesting
+    internal fun setPending(pending: PendingCapture) {
+        _uiState.value = _uiState.value.copy(pendingCapture = pending)
     }
 }
