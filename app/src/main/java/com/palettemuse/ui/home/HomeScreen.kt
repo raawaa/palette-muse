@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -314,7 +315,7 @@ private fun ThemeCard(
             // Arrow-forward circular glass button
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(48.dp) // M3 minimum 48dp touch target
                     .clip(CircleShape)
                     .glassmorphicBackground(alpha = 0.6f)
                     .border(0.5.dp, Color.White.copy(alpha = 0.4f), CircleShape)
@@ -395,8 +396,11 @@ private fun BottomNav(
         modifier = modifier.fillMaxWidth()
     ) {
         // Nav bar background (glassmorphic, rounded top)
+        // Edge-to-edge: pin to the bottom so the glassmorphic background fills
+        // down behind the system gesture inset, then lift the tab content above it.
         Row(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
                 .glassmorphicBackground(alpha = 0.6f)
@@ -405,6 +409,7 @@ private fun BottomNav(
                     color = Color.White.copy(alpha = 0.2f),
                     shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
                 )
+                .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
@@ -461,6 +466,7 @@ private fun BottomNav(
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
+                .navigationBarsPadding() // keep the FAB clear of the system gesture inset
                 .padding(bottom = 24.dp) // lift above bar (-top-6 equivalent)
                 .size(64.dp)
                 .shadow(
