@@ -1,0 +1,66 @@
+package com.palettemuse.core
+
+import android.graphics.Bitmap
+import android.graphics.Color
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+
+@RunWith(AndroidJUnit4::class)
+class PosterRendererTest {
+    private val renderer = PosterRenderer()
+
+    private fun stubPhoto(color: Int, size: Int = 100): Bitmap =
+        Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }
+
+    @Test fun render_grid_2x2_bento_produces1080x1920() {
+        val photos = List(4) { stubPhoto(Color.RED) }
+        val config = PosterRenderer.PosterConfig(
+            title = "Test Grid",
+            primaryColor = Color.RED,
+            template = PosterRenderer.TemplateType.GRID,
+            photos = photos
+        )
+        val result = renderer.render(null, config)
+        assertNotNull(result)
+        assertEquals(1080, result.width)
+        assertEquals(1920, result.height)
+    }
+
+    @Test fun render_film_horizontalStrip() {
+        val photos = List(4) { stubPhoto(Color.BLUE) }
+        val config = PosterRenderer.PosterConfig(
+            title = "Test Film",
+            template = PosterRenderer.TemplateType.FILM,
+            photos = photos
+        )
+        val result = renderer.render(null, config)
+        assertNotNull(result)
+        assertEquals(1080, result.width)
+    }
+
+    @Test fun render_journal_scrapbook() {
+        val photos = List(3) { stubPhoto(Color.GREEN) }
+        val config = PosterRenderer.PosterConfig(
+            title = "Test Journal",
+            template = PosterRenderer.TemplateType.JOURNAL,
+            photos = photos
+        )
+        val result = renderer.render(null, config)
+        assertNotNull(result)
+    }
+
+    @Test fun render_minimal_heroPlusAccent() {
+        val photos = List(2) { stubPhoto(Color.YELLOW) }
+        val config = PosterRenderer.PosterConfig(
+            title = "Test Minimal",
+            template = PosterRenderer.TemplateType.MINIMAL,
+            photos = photos
+        )
+        val result = renderer.render(null, config)
+        assertNotNull(result)
+    }
+}
