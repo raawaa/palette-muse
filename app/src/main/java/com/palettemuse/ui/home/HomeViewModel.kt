@@ -2,39 +2,32 @@ package com.palettemuse.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.palettemuse.data.model.ProjectEntity
-import com.palettemuse.data.repository.ProjectRepository
+import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.data.repository.ThemeWithPhotos
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import javax.inject.Inject
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 data class HomeUiState(
-    val projects: List<ProjectEntity> = emptyList(),
+    val themes: List<ThemeWithPhotos> = emptyList(),
     val isLoading: Boolean = true
 )
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val projectRepository: ProjectRepository
+    private val themeRepository: ThemeRepository
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+    val uiState: StateFlow<HomeUiState> =
+        themeRepository.getAllThemesWithPhotos()
+            .map { themes -> HomeUiState(themes = themes, isLoading = false) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, HomeUiState())
 
-    init {
-        viewModelScope.launch {
-            projectRepository.getAllProjects().collect { projects ->
-                _uiState.value = HomeUiState(projects = projects, isLoading = false)
-            }
-        }
-    }
-
-    fun deleteProject(projectId: String) {
-        viewModelScope.launch {
-            projectRepository.deleteProject(projectId)
-        }
+    fun deleteTheme(themeId: String) {
+        viewModelScope.launch { themeRepository.deleteTheme(themeId) }
     }
 }
