@@ -35,23 +35,27 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import com.palettemuse.core.PosterRenderer
 import com.palettemuse.data.model.PhotoEntity
 import com.palettemuse.data.model.ThemeEntity
+import com.palettemuse.data.repository.ThemeWithPhotos
 import com.palettemuse.theme.Dimens
 import com.palettemuse.theme.OnSurface
 import com.palettemuse.theme.OnSurfaceVariant
@@ -72,6 +76,14 @@ private fun parseHex(hex: String): Color = runCatching {
     Color(android.graphics.Color.parseColor(hex))
 }.getOrDefault(RoseGold)
 
+/** Human-readable Chinese label for each [PosterRenderer.TemplateType] (chip + a11y). */
+private fun PosterRenderer.TemplateType.label(): String = when (this) {
+    PosterRenderer.TemplateType.GRID -> "网格"
+    PosterRenderer.TemplateType.FILM -> "胶片"
+    PosterRenderer.TemplateType.JOURNAL -> "日记"
+    PosterRenderer.TemplateType.MINIMAL -> "极简"
+}
+
 @Composable
 fun ExportScreen(
     onBack: () -> Unit,
@@ -80,14 +92,6 @@ fun ExportScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // Surface one-shot hints (e.g. unsupported template) as SnackBars.
-    LaunchedEffect(uiState.unsupportedTemplateHint) {
-        uiState.unsupportedTemplateHint?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
-            viewModel.consumeUnsupportedHint()
-        }
-    }
 
     // Surface save-to-gallery success as a one-shot confirmation SnackBar.
     LaunchedEffect(uiState.exportSuccess) {
@@ -108,7 +112,7 @@ fun ExportScreen(
                     CircularProgressIndicator(color = PrimaryDesign)
                 }
             }
-            uiState.theme == null -> {
+            uiState.data == null -> {
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -131,7 +135,8 @@ fun ExportScreen(
             }
             else -> {
                 ExportContent(
-                    state = uiState,
+                    data = uiState.data!!,
+                    selectedTemplate = uiState.selectedTemplate,
                     onShare = { viewModel.sharePoster(context) },
                     onSave = { viewModel.savePoster(context) },
                     onSelectTemplate = viewModel::selectTemplate,
@@ -156,10 +161,11 @@ fun ExportScreen(
 
 @Composable
 private fun ExportContent(
-    state: ExportUiState,
+    data: ThemeWithPhotos,
+    selectedTemplate: PosterRenderer.TemplateType,
     onShare: () -> Unit,
     onSave: () -> Unit,
-    onSelectTemplate: (PosterTemplate) -> Unit,
+    onSelectTemplate: (PosterRenderer.TemplateType) -> Unit,
     onBack: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxSize()) {
@@ -172,12 +178,12 @@ private fun ExportContent(
                 .padding(horizontal = Dimens.containerMargin),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // ---- Poster Preview (3:4 white card with Bento collage + footer) ----
+            // ---- Poster Preview Card (3:4, switches by template) ----
             PosterPreviewCard(
-                theme = state.theme!!,
-                photos = state.selectedPhotos,
-                palette = state.palette,
-                representativeHex = state.theme.representativeHex,
+                theme = data.theme,
+                photos = data.photos,
+                palette = data.palette,
+                template = selectedTemplate,
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -185,7 +191,7 @@ private fun ExportContent(
 
             // ---- Template selector chips (horizontal scroll) ----
             TemplateChips(
-                selected = state.selectedTemplate,
+                selected = selectedTemplate,
                 onSelect = onSelectTemplate
             )
         }
@@ -226,7 +232,7 @@ private fun ExportContent(
 }
 
 // ===================================================================
-// Poster Preview Card — 3:4 white card, Bento 2x2 collage + footer
+// Poster Preview Card — 3:4 white card, switches by template
 // ===================================================================
 
 @Composable
@@ -234,12 +240,9 @@ private fun PosterPreviewCard(
     theme: ThemeEntity,
     photos: List<PhotoEntity>,
     palette: List<String>,
-    representativeHex: String,
+    template: PosterRenderer.TemplateType,
     modifier: Modifier = Modifier
 ) {
-    // Design: aspect-[3/4], white bg, rounded-xl (3rem ≈ 28dp), ambient shadow.
-    // NOTE: shadow is applied BEFORE clip per the design spec so the soft
-    // rose-gold ambient shadow is not clipped by the rounded corners.
     Box(
         modifier = modifier
             .aspectRatio(3f / 4f)
@@ -251,41 +254,205 @@ private fun PosterPreviewCard(
             )
             .clip(RoundedCornerShape(Dimens.cardCorner))
             .background(Color.White)
-            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // ---- Bento 2x2 collage (flex-1) ----
-            BentoCollage(
-                photos = photos,
-                overlayHex = representativeHex,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            // ---- Footer: title + subtitle + palette tag ----
-            PosterFooter(theme = theme, palette = palette)
+        when (template) {
+            PosterRenderer.TemplateType.GRID ->
+                PosterPreviewGrid(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize())
+            PosterRenderer.TemplateType.FILM ->
+                PosterPreviewFilm(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize())
+            PosterRenderer.TemplateType.JOURNAL ->
+                PosterPreviewJournal(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize())
+            PosterRenderer.TemplateType.MINIMAL ->
+                PosterPreviewMinimal(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize())
         }
     }
 }
 
 // ===================================================================
-// Bento 2x2 collage — 4 AsyncImage tiles + representativeHex color overlay
+// PosterPreviewGrid — 2x2 Bento collage + footer (4 photos)
+// ===================================================================
+
+@Composable
+private fun PosterPreviewGrid(
+    photos: List<PhotoEntity>,
+    theme: ThemeEntity,
+    palette: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.padding(16.dp)) {
+        BentoCollage(
+            photos = photos,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+        )
+        Spacer(Modifier.height(16.dp))
+        PosterFooter(theme = theme, palette = palette)
+    }
+}
+
+// ===================================================================
+// PosterPreviewFilm — 顶部大照 + 下方 3 小照横排 + 黑/白边框 (4 photos)
+// ===================================================================
+
+@Composable
+private fun PosterPreviewFilm(
+    photos: List<PhotoEntity>,
+    theme: ThemeEntity,
+    palette: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.background(Color.White)) {
+        // Top hero photo
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .border(2.dp, Color.Black)
+        ) {
+            PhotoSlot(photos.getOrNull(0), modifier = Modifier.fillMaxSize())
+        }
+        // 3-up bottom strip
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(160.dp)
+        ) {
+            val stripCount = 3
+            for (i in 1..stripCount) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxSize()
+                        .border(2.dp, Color.White)
+                ) {
+                    PhotoSlot(photos.getOrNull(i), modifier = Modifier.fillMaxSize())
+                }
+            }
+        }
+        PosterFooter(theme = theme, palette = palette)
+    }
+}
+
+// ===================================================================
+// PosterPreviewJournal — 散落拼贴 (1-2 主照 + 小照倾斜 ±3°) (3 photos)
+// ===================================================================
+
+@Composable
+private fun PosterPreviewJournal(
+    photos: List<PhotoEntity>,
+    theme: ThemeEntity,
+    palette: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.background(Color.White).padding(16.dp)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    .rotate(-3f)
+                    .border(2.dp, Color.Black)
+            ) {
+                PhotoSlot(photos.getOrNull(0), modifier = Modifier.fillMaxSize())
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    .rotate(3f)
+                    .border(2.dp, Color.Black)
+            ) {
+                PhotoSlot(photos.getOrNull(1), modifier = Modifier.fillMaxSize())
+            }
+        }
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    .rotate(3f)
+                    .border(2.dp, Color.Black)
+            ) {
+                PhotoSlot(photos.getOrNull(2), modifier = Modifier.fillMaxSize())
+            }
+        }
+        PosterFooter(theme = theme, palette = palette)
+    }
+}
+
+// ===================================================================
+// PosterPreviewMinimal — 主照 3/4 + 主题名/色板底部 + 1 小图角标 (2 photos)
+// ===================================================================
+
+@Composable
+private fun PosterPreviewMinimal(
+    photos: List<PhotoEntity>,
+    theme: ThemeEntity,
+    palette: List<String>,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.background(Color.White)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(3f)
+        ) {
+            PhotoSlot(photos.getOrNull(0), modifier = Modifier.fillMaxSize())
+            // Small corner photo
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+                    .size(80.dp)
+                    .border(2.dp, Color.Black)
+            ) {
+                PhotoSlot(photos.getOrNull(1), modifier = Modifier.fillMaxSize())
+            }
+        }
+        Spacer(Modifier.weight(1f))
+        PosterFooter(theme = theme, palette = palette)
+    }
+}
+
+// ===================================================================
+// Photo slot — AsyncImage with optional placeholder tint (reused by all 4 previews)
+// ===================================================================
+
+@Composable
+private fun PhotoSlot(photo: PhotoEntity?, modifier: Modifier = Modifier) {
+    if (photo != null && photo.imagePath.isNotBlank()) {
+        AsyncImage(
+            model = photo.imagePath,
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Crop
+        )
+    } else {
+        Box(modifier = modifier.background(OutlineVariant))
+    }
+}
+
+// ===================================================================
+// Bento 2x2 collage — 4 AsyncImage tiles (used by Grid preview)
 // ===================================================================
 
 @Composable
 private fun BentoCollage(
     photos: List<PhotoEntity>,
-    overlayHex: String,
     modifier: Modifier = Modifier
 ) {
-    val overlay = parseHex(overlayHex)
-    // Simulate the design's mix-blend-multiply + bg-primary/10 overlay:
-    // a low-alpha tint of the theme's representative color unified across tiles.
-    val overlayColor = overlay.copy(alpha = 0.10f)
-
     // Build exactly 4 slots; missing photos fall back to a tinted placeholder tile.
     val slots = (0 until 4).map { idx -> photos.getOrNull(idx) }
 
@@ -299,45 +466,17 @@ private fun BentoCollage(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 rowPair.forEach { photo ->
-                    BentoTile(
-                        photo = photo,
-                        overlayColor = overlayColor,
-                        placeholderColor = overlay.copy(alpha = 0.05f),
+                    Box(
                         modifier = Modifier
                             .weight(1f)
                             .aspectRatio(1f)
-                    )
+                            .clip(RoundedCornerShape(Dimens.imageCorner))
+                            .background(OutlineVariant)
+                    ) {
+                        PhotoSlot(photo = photo, modifier = Modifier.fillMaxSize())
+                    }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun BentoTile(
-    photo: PhotoEntity?,
-    overlayColor: Color,
-    placeholderColor: Color,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(Dimens.imageCorner))
-            .background(placeholderColor)
-    ) {
-        if (photo != null && photo.imagePath.isNotBlank()) {
-            AsyncImage(
-                model = photo.imagePath,
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop
-            )
-            // Unifying color overlay (mix-blend-multiply stand-in).
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(overlayColor)
-            )
         }
     }
 }
@@ -396,25 +535,30 @@ private fun PaletteTag(palette: List<String>) {
 }
 
 // ===================================================================
-// Template chips — Grid (active, RoseGold) / Film / Diary / Minimal
-// MVP: only Grid is selectable; others surface a "coming soon" SnackBar.
+// Template chips — Grid / Film / Diary / Minimal (all 4 selectable in Plan 3)
 // ===================================================================
 
 @Composable
 private fun TemplateChips(
-    selected: PosterTemplate,
-    onSelect: (PosterTemplate) -> Unit
+    selected: PosterRenderer.TemplateType,
+    onSelect: (PosterRenderer.TemplateType) -> Unit
 ) {
+    val templates = listOf(
+        PosterRenderer.TemplateType.GRID,
+        PosterRenderer.TemplateType.FILM,
+        PosterRenderer.TemplateType.JOURNAL,
+        PosterRenderer.TemplateType.MINIMAL
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        PosterTemplate.entries.forEach { template ->
+        templates.forEach { template ->
             val isActive = template == selected
             TemplateChip(
-                label = template.label,
+                label = template.label(),
                 isActive = isActive,
                 onClick = { onSelect(template) }
             )
@@ -428,9 +572,9 @@ private fun TemplateChip(
     isActive: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isActive) PrimaryDesign else OutlineVariant
-    val textColor = if (isActive) PrimaryDesign else OnSurfaceVariant
-    val bgColor = if (isActive) PrimaryDesign.copy(alpha = 0.05f) else Color.Transparent
+    val borderColor = if (isActive) RoseGold else OutlineVariant
+    val textColor = if (isActive) RoseGold else OnSurfaceVariant
+    val bgColor = if (isActive) RoseGold.copy(alpha = 0.08f) else Color.Transparent
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(Dimens.fullRound))
@@ -525,7 +669,3 @@ private fun BottomActionPanel(
         }
     }
 }
-
-// ===================================================================
-// Share helper — moved to ExportViewModel.sharePoster (off main thread)
-// ===================================================================
