@@ -1,0 +1,113 @@
+package com.palettemuse.data.repository
+
+import com.palettemuse.core.ColorMatcher
+import com.palettemuse.core.ColorNamer
+import com.palettemuse.data.local.PhotoDao
+import com.palettemuse.data.local.ThemeDao
+import com.palettemuse.data.model.PhotoEntity
+import com.palettemuse.data.model.ThemeEntity
+import java.util.UUID
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapLatest
+
+data class ThemeWithPhotos(
+    val theme: ThemeEntity,
+    val photos: List<PhotoEntity>,
+    val palette: List<String>
+)
+
+@Singleton
+class ThemeRepository @Inject constructor(
+    private val themeDao: ThemeDao,
+    private val photoDao: PhotoDao,
+    private val colorMatcher: ColorMatcher,
+    private val colorNamer: ColorNamer
+) {
+    suspend fun findMatchingTheme(hex: String): ThemeEntity? {
+        val themes = themeDao.getAllThemes().first()
+        return themes
+            .map { it to colorMatcher.matchPercentage(it.representativeHex, hex) }
+            .filter { it.second >= MATCH_THRESHOLD }
+            .maxByOrNull { it.second }
+            ?.first
+    }
+
+    suspend fun savePhotoToTheme(
+        themeId: String,
+        imagePath: String,
+        dominantHex: String,
+        isSeed: Boolean = false
+    ) {
+        photoDao.insert(
+            PhotoEntity(
+                id = UUID.randomUUID().toString(),
+                themeId = themeId,
+                imagePath = imagePath,
+                dominantHex = dominantHex,
+                isSeed = isSeed
+            )
+        )
+        touchTheme(themeId)
+    }
+
+    suspend fun createThemeAndSave(imagePath: String, dominantHex: String): String {
+        val themeId = UUID.randomUUID().toString()
+        themeDao.insert(
+            ThemeEntity(
+                id = themeId,
+                name = colorNamer.nameColor(dominantHex),
+                representativeHex = dominantHex
+            )
+        )
+        photoDao.insert(
+            PhotoEntity(
+                id = UUID.randomUUID().toString(),
+                themeId = themeId,
+                imagePath = imagePath,
+                dominantHex = dominantHex,
+                isSeed = true
+            )
+        )
+        return themeId
+    }
+
+    fun getAllThemesWithPhotos(): Flow<List<ThemeWithPhotos>> =
+        themeDao.getAllThemes().mapLatest { themes ->
+            themes.map { theme ->
+                val photos = photoDao.getPhotosForThemeOnce(theme.id)
+                ThemeWithPhotos(theme, photos, buildPalette(theme, photos))
+            }
+        }
+
+    suspend fun renameTheme(id: String, name: String) {
+        themeDao.getTheme(id)?.let { themeDao.update(it.copy(name = name, updatedAt = System.currentTimeMillis())) }
+    }
+
+    suspend fun updateThemeColor(id: String, newHex: String) {
+        themeDao.getTheme(id)?.let {
+            themeDao.update(it.copy(representativeHex = newHex, updatedAt = System.currentTimeMillis()))
+        }
+    }
+
+    suspend fun deleteTheme(id: String) = themeDao.deleteById(id)
+
+    private suspend fun touchTheme(themeId: String) {
+        themeDao.getTheme(themeId)?.let {
+            themeDao.update(it.copy(updatedAt = System.currentTimeMillis()))
+        }
+    }
+
+    private fun buildPalette(theme: ThemeEntity, photos: List<PhotoEntity>): List<String> {
+        val distinct = photos.map { it.dominantHex }
+            .distinct()
+            .filter { it != theme.representativeHex }
+        return listOf(theme.representativeHex) + distinct.take(2)
+    }
+
+    companion object {
+        const val MATCH_THRESHOLD = 60
+    }
+}
