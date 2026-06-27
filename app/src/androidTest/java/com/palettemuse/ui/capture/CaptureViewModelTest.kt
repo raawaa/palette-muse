@@ -33,7 +33,17 @@ class CaptureViewModelTest {
 
     @Before fun setup() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
-        db = Room.inMemoryDatabaseBuilder(ctx, AppDatabase::class.java).allowMainThreadQueries().build()
+        // Run Room queries/transactions inline so DAO suspend calls complete
+        // synchronously within the calling coroutine. This eliminates the race
+        // where Room's real IO executor escapes runTest's virtual clock and
+        // advanceUntilIdle() cannot drain pending DB work (test flakiness).
+        // (asExecutor() is not available in kotlinx-coroutines-test 1.10.2.)
+        val inlineExecutor = java.util.concurrent.Executor { it.run() }
+        db = Room.inMemoryDatabaseBuilder(ctx, AppDatabase::class.java)
+            .allowMainThreadQueries()
+            .setTransactionExecutor(inlineExecutor)
+            .setQueryExecutor(inlineExecutor)
+            .build()
         repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorMatcher(), ColorNamer())
         storage = InternalPhotoStorage(ctx)
         Dispatchers.setMain(dispatcher)
