@@ -2,10 +2,6 @@ package com.palettemuse.di
 
 import android.content.Context
 import androidx.room.Room
-import com.palettemuse.core.ColorAnalyzer
-import com.palettemuse.core.ColorMatcher
-import com.palettemuse.core.ColorNamer
-import com.palettemuse.core.PosterRenderer
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.local.PhotoDao
 import com.palettemuse.data.local.ThemeDao
@@ -33,30 +29,6 @@ object AppModule {
         )
             .addMigrations(AppDatabase.MIGRATION_2_3)
             .build()
-    }
-
-    @Provides
-    @Singleton
-    fun provideColorAnalyzer(): ColorAnalyzer {
-        return ColorAnalyzer()
-    }
-
-    @Provides
-    @Singleton
-    fun provideColorNamer(): ColorNamer {
-        return ColorNamer()
-    }
-
-    @Provides
-    @Singleton
-    fun provideColorMatcher(): ColorMatcher {
-        return ColorMatcher()
-    }
-
-    @Provides
-    @Singleton
-    fun providePosterRenderer(): PosterRenderer {
-        return PosterRenderer()
     }
 
     @Provides

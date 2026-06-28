@@ -15,11 +15,8 @@ import androidx.lifecycle.LifecycleOwner
 import java.nio.ByteBuffer
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-import javax.inject.Inject
-import javax.inject.Singleton
 
-@Singleton
-class CameraManager @Inject constructor() {
+class CameraManager {
 
     private var imageCapture: ImageCapture? = null
     private var imageAnalysis: ImageAnalysis? = null
