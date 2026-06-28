@@ -190,7 +190,7 @@ private fun ExportContent(
             PosterPreviewCard(
                 theme = data.theme,
                 photos = data.photos,
-                palette = data.palette,
+                swatches = data.swatches,
                 template = selectedTemplate,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -247,7 +247,7 @@ private fun ExportContent(
 private fun PosterPreviewCard(
     theme: ThemeEntity,
     photos: List<PhotoEntity>,
-    palette: List<String>,
+    swatches: List<String>,
     template: PosterRenderer.TemplateType,
     modifier: Modifier = Modifier
 ) {
@@ -269,19 +269,19 @@ private fun PosterPreviewCard(
         // Photo layer — fills the full card
         when (template) {
             PosterRenderer.TemplateType.GRID ->
-                PosterPreviewGrid(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
+                PosterPreviewGrid(photos = photos, theme = theme, swatches = swatches, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.FILM ->
-                PosterPreviewFilm(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
+                PosterPreviewFilm(photos = photos, theme = theme, swatches = swatches, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.JOURNAL ->
-                PosterPreviewJournal(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
+                PosterPreviewJournal(photos = photos, theme = theme, swatches = swatches, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.MINIMAL ->
-                PosterPreviewMinimal(photos = photos, theme = theme, palette = palette, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
+                PosterPreviewMinimal(photos = photos, theme = theme, swatches = swatches, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
         }
 
-        // Footer overlay — drawn on top of photos (matching Canvas drawTitleAndPalette)
+        // Footer overlay — drawn on top of photos (matching Canvas drawTitleAndStrip)
         PosterFooter(
             theme = theme,
-            palette = palette,
+            swatches = swatches,
             template = template,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
@@ -296,7 +296,7 @@ private fun PosterPreviewCard(
 private fun PosterPreviewGrid(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
-    palette: List<String>,
+    swatches: List<String>,
     modifier: Modifier = Modifier,
     cardW: Dp = 0.dp,
     cardH: Dp = 0.dp
@@ -319,7 +319,7 @@ private fun PosterPreviewGrid(
 private fun PosterPreviewFilm(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
-    palette: List<String>,
+    swatches: List<String>,
     modifier: Modifier = Modifier,
     cardW: Dp,
     cardH: Dp
@@ -365,7 +365,7 @@ private fun PosterPreviewFilm(
 private fun PosterPreviewJournal(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
-    palette: List<String>,
+    swatches: List<String>,
     modifier: Modifier = Modifier,
     cardW: Dp,
     cardH: Dp
@@ -402,7 +402,7 @@ private fun PosterPreviewJournal(
 private fun PosterPreviewMinimal(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
-    palette: List<String>,
+    swatches: List<String>,
     modifier: Modifier = Modifier,
     cardW: Dp,
     cardH: Dp
@@ -491,13 +491,13 @@ private fun BentoCollage(
 }
 
 // ===================================================================
-// Poster Footer — theme name + series label + palette swatch tag
+// Poster Footer — theme name + series label + swatches swatch tag
 // ===================================================================
 
 @Composable
 private fun PosterFooter(
     theme: ThemeEntity,
-    palette: List<String>,
+    swatches: List<String>,
     template: PosterRenderer.TemplateType,
     modifier: Modifier = Modifier
 ) {
@@ -528,7 +528,7 @@ private fun PosterFooter(
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            palette.take(3).forEach { hex ->
+            swatches.take(3).forEach { hex ->
                 Box(
                     modifier = Modifier
                         .size(paletteSize)
@@ -551,7 +551,7 @@ private fun PosterFooter(
 }
 
 @Composable
-private fun PaletteTag(palette: List<String>) {
+private fun SwatchTag(swatches: List<String>) {
     Row(
         modifier = Modifier
             .clip(RoundedCornerShape(Dimens.fullRound))
@@ -561,7 +561,7 @@ private fun PaletteTag(palette: List<String>) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        palette.forEach { hex ->
+        swatches.forEach { hex ->
             Box(
                 modifier = Modifier
                     .size(12.dp)

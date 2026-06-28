@@ -216,7 +216,7 @@ fun HomeScreen(
 }
 
 // ===================================================================
-// Theme Card — large single-column image card with real palette dots
+// Theme Card — large single-column image card with real swatches dots
 // ===================================================================
 
 @Composable
@@ -278,12 +278,12 @@ private fun ThemeCard(
             verticalAlignment = Alignment.Bottom
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                // Real palette dots + theme name
+                // Real swatches dots + theme name
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    themeWithPhotos.palette.forEach { hex ->
+                    themeWithPhotos.swatches.forEach { hex ->
                         Box(
                             Modifier
                                 .size(12.dp)

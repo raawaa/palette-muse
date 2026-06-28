@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
 /**
  * UI state for the Export screen.
  *
- * @param data the loaded [ThemeWithPhotos] (theme + photos + palette) or null when missing / loading.
+ * @param data the loaded [ThemeWithPhotos] (theme + photos + swatches) or null when missing / loading.
  * @param selectedTemplate the currently active template chip. All 4 templates are selectable in Plan 3.
  * @param previewBitmap the composed poster Bitmap used for save / share.
  *                       Built with [PosterRenderer.render] from photos picked per template +
@@ -133,8 +133,8 @@ class ExportViewModel @AssistedInject constructor(
             title = data.theme.name.ifBlank { "Moodboard Color Harmony" },
             subtitle = "curated with Palette Muse",
             primaryColor = primary,
-            secondaryColor = adjustLightness(primary, 0.85f),
-            accentColor = adjustLightness(primary, 0.25f),
+            secondaryColor = shadeOf(primary, 0.85f),
+            accentColor = shadeOf(primary, 0.25f),
             photos = photos,
             template = template
         )
@@ -157,7 +157,7 @@ class ExportViewModel @AssistedInject constructor(
     }
 
     /** Returns [base] with its luminance nudged by [factor] (0.0 = black, 1.0 = white). */
-    private fun adjustLightness(base: Int, factor: Float): Int {
+    private fun shadeOf(base: Int, factor: Float): Int {
         val r = (Color.red(base) * factor).toInt().coerceIn(0, 255)
         val g = (Color.green(base) * factor).toInt().coerceIn(0, 255)
         val b = (Color.blue(base) * factor).toInt().coerceIn(0, 255)

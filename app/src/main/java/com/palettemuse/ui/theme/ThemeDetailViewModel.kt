@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 /**
  * UI state for the Theme Detail screen.
  *
- * @param data the loaded [ThemeWithPhotos] (theme + photos + palette) or null when missing.
+ * @param data the loaded [ThemeWithPhotos] (theme + photos + swatches) or null when missing.
  * @param isLoading true while the initial load is in flight.
  * @param error optional error message; null means no error.
  * @param isDeleted true once the user has deleted the theme — the host should pop back.
@@ -86,7 +86,7 @@ class ThemeDetailViewModel @AssistedInject constructor(
         }
     }
 
-    /** Updates the theme's representative color (and thus palette head) and refreshes. */
+    /** Updates the theme's representative color (and thus swatches head) and refreshes. */
     fun updateThemeColor(hex: String) {
         viewModelScope.launch {
             runCatching { themeRepository.updateThemeColor(themeId, hex) }

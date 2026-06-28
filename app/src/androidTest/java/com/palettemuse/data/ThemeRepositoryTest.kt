@@ -71,8 +71,8 @@ class ThemeRepositoryTest {
         repo.savePhotoToTheme(id, "/cap.jpg", "#C99A92")
         val list = repo.getAllThemesWithPhotos().first()
         assertEquals(1, list.size)
-        val palette = list[0].palette
-        assertEquals("#DCA8A6", palette.first()) // 代表色居首
-        assertTrue(palette.size in 1..3)
+        val swatches = list[0].swatches
+        assertEquals("#DCA8A6", swatches.first()) // 代表色居首
+        assertTrue(swatches.size in 1..3)
     }
 }

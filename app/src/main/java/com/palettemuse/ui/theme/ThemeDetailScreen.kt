@@ -159,7 +159,7 @@ fun ThemeDetailScreen(
 }
 
 // ===================================================================
-// Content — TopAppBar + scrollable palette header + Hero + masonry
+// Content — TopAppBar + scrollable swatches header + Hero + masonry
 // ===================================================================
 
 @Composable
@@ -174,7 +174,7 @@ private fun ThemeDetailContent(
 ) {
     val theme = state.theme
     val photos = state.photos
-    val palette = state.palette
+    val swatches = state.swatches
 
     // Hero = seed photo (or first photo as fallback).
     val heroPhoto = photos.firstOrNull { it.isSeed } ?: photos.firstOrNull()
@@ -204,7 +204,7 @@ private fun ThemeDetailContent(
             verticalItemSpacing = Dimens.gutter,
             horizontalArrangement = Arrangement.spacedBy(Dimens.gutter)
         ) {
-            // ---- Header (palette header) — spans full width as a single item ----
+            // ---- Header (swatches header) — spans full width as a single item ----
             item(span = fullLineSpan()) {
                 Column(
                     modifier = Modifier
@@ -217,7 +217,7 @@ private fun ThemeDetailContent(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        palette.forEach { hex ->
+                        swatches.forEach { hex ->
                             Box(
                                 Modifier
                                     .size(32.dp)

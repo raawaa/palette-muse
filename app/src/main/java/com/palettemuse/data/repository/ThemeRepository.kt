@@ -16,7 +16,7 @@ import kotlinx.coroutines.flow.mapLatest
 data class ThemeWithPhotos(
     val theme: ThemeEntity,
     val photos: List<PhotoEntity>,
-    val palette: List<String>
+    val swatches: List<String>
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -73,7 +73,7 @@ class ThemeRepository @Inject constructor(
         themeDao.getAllThemes().mapLatest { themes ->
             themes.map { theme ->
                 val photos = photoDao.getPhotosForThemeOnce(theme.id)
-                ThemeWithPhotos(theme, photos, buildPalette(theme, photos))
+                ThemeWithPhotos(theme, photos, buildSwatches(theme, photos))
             }
         }
 
@@ -85,14 +85,14 @@ class ThemeRepository @Inject constructor(
     fun getAllThemes(): Flow<List<ThemeEntity>> = themeDao.getAllThemes()
 
     /**
-     * Loads a single theme together with its photos and built palette.
-     * Used by ThemeDetailScreen to render the palette header + Hero + masonry grid.
+     * Loads a single theme together with its photos and built swatches.
+     * Used by ThemeDetailScreen to render the swatches header + Hero + masonry grid.
      * Returns null when the theme id does not exist.
      */
     suspend fun getThemeWithPhotos(id: String): ThemeWithPhotos? {
         val theme = themeDao.getTheme(id) ?: return null
         val photos = photoDao.getPhotosForThemeOnce(id)
-        return ThemeWithPhotos(theme, photos, buildPalette(theme, photos))
+        return ThemeWithPhotos(theme, photos, buildSwatches(theme, photos))
     }
 
     suspend fun renameTheme(id: String, name: String) {
@@ -111,7 +111,7 @@ class ThemeRepository @Inject constructor(
         }
     }
 
-    private fun buildPalette(theme: ThemeEntity, photos: List<PhotoEntity>): List<String> {
+    private fun buildSwatches(theme: ThemeEntity, photos: List<PhotoEntity>): List<String> {
         val distinct = photos.map { it.dominantHex }
             .distinct()
             .filter { it != theme.representativeHex }

@@ -53,7 +53,7 @@ class PosterRenderer @Inject constructor() {
             canvas.drawBitmap(bmp, null,
                 RectF(left, top, right, bottom), null)
         }
-        drawTitleAndPalette(canvas, config, w, h)
+        drawTitleAndStrip(canvas, config, w, h)
     }
 
     private fun renderFilm(canvas: Canvas, config: PosterConfig, w: Int, h: Int) {
@@ -71,7 +71,7 @@ class PosterRenderer @Inject constructor() {
             canvas.drawBitmap(photos[i], null,
                 RectF(left, bottomY, left + smallW, h.toFloat()), null)
         }
-        drawTitleAndPalette(canvas, config, w, h)
+        drawTitleAndStrip(canvas, config, w, h)
     }
 
     private fun renderJournal(canvas: Canvas, config: PosterConfig, w: Int, h: Int) {
@@ -90,7 +90,7 @@ class PosterRenderer @Inject constructor() {
                 RectF(col * cellW, row * cellH, (col + 1) * cellW, (row + 1) * cellH), null)
             canvas.restore()
         }
-        drawTitleAndPalette(canvas, config, w, h)
+        drawTitleAndStrip(canvas, config, w, h)
     }
 
     private fun renderMinimal(canvas: Canvas, config: PosterConfig, w: Int, h: Int) {
@@ -105,10 +105,10 @@ class PosterRenderer @Inject constructor() {
                     RectF(w - smallSize - 16f, mainH - smallSize - 16f, w - 16f, mainH - 16f), null)
             }
         }
-        drawTitleAndPalette(canvas, config, w, h)
+        drawTitleAndStrip(canvas, config, w, h)
     }
 
-    private fun drawTitleAndPalette(canvas: Canvas, config: PosterConfig, w: Int, h: Int) {
+    private fun drawTitleAndStrip(canvas: Canvas, config: PosterConfig, w: Int, h: Int) {
         val template = config.template
         val (bg, textColor, textSize, swatchSize) = when (template) {
             TemplateType.GRID -> Quad(Color.WHITE, Color.BLACK, 64f, 40f)
@@ -127,14 +127,14 @@ class PosterRenderer @Inject constructor() {
             typeface = if (template == TemplateType.JOURNAL) Typeface.create(Typeface.SERIF, Typeface.ITALIC) else Typeface.create(Typeface.SERIF, Typeface.NORMAL)
         }
         canvas.drawText(config.title, 40f, h * 0.95f, textPaint)
-        // draw palette
-        val palette = listOf(config.primaryColor, config.secondaryColor, config.accentColor)
+        // draw shadeRamp
+        val shadeRamp = listOf(config.primaryColor, config.secondaryColor, config.accentColor)
         val swatchY = h * 0.88f
         val swatchPaint = Paint().apply { style = Paint.Style.FILL; isAntiAlias = true }
         val borderPaint = if (template == TemplateType.FILM) {
             Paint().apply { style = Paint.Style.STROKE; strokeWidth = 1f; color = Color.BLACK; isAntiAlias = true }
         } else null
-        palette.forEachIndexed { i, c ->
+        shadeRamp.forEachIndexed { i, c ->
             val left = 40f + i * (swatchSize + 8f)
             swatchPaint.color = c
             if (template == TemplateType.JOURNAL) {
