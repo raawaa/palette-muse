@@ -10,6 +10,7 @@ import com.palettemuse.core.ColorNamer
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.repository.InternalPhotoStorage
 import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.data.repository.ThemeMatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -46,7 +47,7 @@ class CaptureViewModelTest {
             .setTransactionExecutor(inlineExecutor)
             .setQueryExecutor(inlineExecutor)
             .build()
-        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorMatcher(), ColorNamer())
+        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()))
         storage = InternalPhotoStorage(ctx)
         Dispatchers.setMain(dispatcher)
     }
@@ -55,7 +56,7 @@ class CaptureViewModelTest {
 
     @Test
     fun confirmCapture_createsThemeWhenNoMatch() = runTest(dispatcher) {
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
         vm.setPending(PendingCapture("/cap.jpg", "#DCA8A6", matchedTheme = null))
         vm.confirmCapture()
         advanceUntilIdle()
@@ -67,7 +68,7 @@ class CaptureViewModelTest {
     fun confirmCapture_joinsThemeWhenMatched() = runTest(dispatcher) {
         val seedId = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         val matched = repo.findMatchingTheme("#DCB0A8")!!
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
         vm.setPending(PendingCapture("/cap.jpg", "#DCB0A8", matched))
         vm.confirmCapture()
         advanceUntilIdle()
@@ -79,7 +80,7 @@ class CaptureViewModelTest {
     fun saveAsNewTheme_createsSeparateThemeEvenWhenMatched() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         val matched = repo.findMatchingTheme("#DCB0A8")!!
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
         vm.setPending(PendingCapture("/cap.jpg", "#DCB0A8", matched))
         vm.saveAsNewTheme()
         advanceUntilIdle()
@@ -90,7 +91,7 @@ class CaptureViewModelTest {
     @Test
     fun onFrameAnalyzed_picksClosestTheme() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
         advanceUntilIdle()  // drain init's themes collector before analyzing a frame
         val pixels = IntArray(100) { 0xFFDCA8A6.toInt() }  // exact hex match
         vm.onFrameAnalyzed(pixels, 10, 10)
@@ -105,7 +106,7 @@ class CaptureViewModelTest {
     @Test
     fun onFrameAnalyzed_fallbackRoseGoldWhenNoMatch() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
         advanceUntilIdle()  // drain init's themes collector before analyzing a frame
         val pixels = IntArray(100) { 0xFF00FF00.toInt() }  // 亮绿 vs Dusty Rose → 大 ΔE → fallback
         vm.onFrameAnalyzed(pixels, 10, 10)
@@ -118,7 +119,7 @@ class CaptureViewModelTest {
 
     @Test
     fun onFrameAnalyzed_skipsWhenNoThemes() = runTest(dispatcher) {
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher())
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
         advanceUntilIdle() // init collect completes (empty _themes)
         val before = vm.uiState.value.targetTheme
         val pixels = IntArray(100) { 0xFFDCA8A6.toInt() }

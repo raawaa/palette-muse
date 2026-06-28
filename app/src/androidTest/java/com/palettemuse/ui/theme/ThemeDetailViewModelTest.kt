@@ -8,6 +8,7 @@ import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.data.repository.ThemeMatcher
 import com.palettemuse.ui.navigation.Routes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -38,7 +39,7 @@ class ThemeDetailViewModelTest {
             .setTransactionExecutor(inlineExecutor)
             .setQueryExecutor(inlineExecutor)
             .build()
-        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorMatcher(), ColorNamer())
+        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()))
         Dispatchers.setMain(dispatcher)
     }
 

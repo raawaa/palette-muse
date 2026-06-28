@@ -1,6 +1,5 @@
 package com.palettemuse.data.repository
 
-import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
 import com.palettemuse.data.local.PhotoDao
 import com.palettemuse.data.local.ThemeDao
@@ -25,17 +24,11 @@ data class ThemeWithPhotos(
 class ThemeRepository @Inject constructor(
     private val themeDao: ThemeDao,
     private val photoDao: PhotoDao,
-    private val colorMatcher: ColorMatcher,
-    private val colorNamer: ColorNamer
+    private val colorNamer: ColorNamer,
+    private val themeMatcher: ThemeMatcher
 ) {
-    suspend fun findMatchingTheme(hex: String): ThemeEntity? {
-        val themes = themeDao.getAllThemes().first()
-        return themes
-            .map { it to colorMatcher.matchPercentage(it.representativeHex, hex) }
-            .filter { it.second >= MATCH_THRESHOLD }
-            .maxByOrNull { it.second }
-            ?.first
-    }
+    suspend fun findMatchingTheme(hex: String): ThemeEntity? =
+        themeMatcher.bestMatch(themeDao.getAllThemes().first(), hex)?.theme
 
     suspend fun savePhotoToTheme(
         themeId: String,
@@ -123,9 +116,5 @@ class ThemeRepository @Inject constructor(
             .distinct()
             .filter { it != theme.representativeHex }
         return listOf(theme.representativeHex) + distinct.take(2)
-    }
-
-    companion object {
-        const val MATCH_THRESHOLD = 60
     }
 }

@@ -8,6 +8,7 @@ import com.palettemuse.core.ColorMatcher
 import com.palettemuse.data.model.ThemeEntity
 import com.palettemuse.data.repository.PhotoStorage
 import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.data.repository.ThemeMatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +37,8 @@ class CaptureViewModel @Inject constructor(
     private val themeRepository: ThemeRepository,
     private val colorAnalyzer: ColorAnalyzer,
     private val photoStorage: PhotoStorage,
-    private val colorMatcher: ColorMatcher
+    private val colorMatcher: ColorMatcher,
+    private val themeMatcher: ThemeMatcher
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CaptureUiState())
@@ -53,13 +55,9 @@ class CaptureViewModel @Inject constructor(
     fun onFrameAnalyzed(pixels: IntArray, width: Int, height: Int) {
         if (_themes.value.isEmpty()) return // 等待 themes 缓存就绪 (首帧 themes 可能未加载)
         val sampleHex = colorMatcher.extractCenterAverageColor(pixels, width, height)
-        val themes = _themes.value
-        val best = themes
-            .map { it to colorMatcher.matchPercentage(it.representativeHex, sampleHex) }
-            .filter { it.second >= THEME_MATCH_THRESHOLD }
-            .maxByOrNull { it.second }
+        val best = themeMatcher.bestMatch(_themes.value, sampleHex)
         val target = if (best != null) {
-            TargetState(best.first.name, best.second, isFallback = false)
+            TargetState(best.theme.name, best.score, isFallback = false)
         } else {
             TargetState("Rose Gold", 0, isFallback = true)
         }
@@ -117,9 +115,5 @@ class CaptureViewModel @Inject constructor(
     @androidx.annotation.VisibleForTesting
     internal fun setPending(pending: PendingCapture) {
         _uiState.value = _uiState.value.copy(pendingCapture = pending)
-    }
-
-    companion object {
-        const val THEME_MATCH_THRESHOLD = 60
     }
 }
