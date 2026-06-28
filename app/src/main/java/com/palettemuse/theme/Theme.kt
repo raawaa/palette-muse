@@ -1,7 +1,6 @@
 package com.palettemuse.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,11 +10,9 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 
@@ -63,25 +60,19 @@ private val LightColorScheme = lightColorScheme(
 )
 
 // ===================================================================
-// Glassmorphism 辅助
-// 设计: backdrop-blur(20px) + 60% 白 + 0.5px 白描边
-// Android 12+: Modifier.blur()
-// 降级: 半透明白色
+// Translucent scrim for TopAppBar / BottomBar overlays
+// -------------------------------------------------------------------
+// NOTE: this is intentionally a plain translucent fill, NOT a
+// Modifier.blur(). blur() only blurs the node's OWN content — it cannot
+// blur the backdrop behind it — so a blur here was (a) invisible against
+// the uniform fill and (b) softly smearing the bar's own text/icons.
+// Keep it a light scrim (low alpha) so content shows through.
 // ===================================================================
 
-/** 给 TopAppBar / BottomBar 添加玻璃质感背景 */
+/** A light translucent scrim for overlay bars/pills. */
 fun Modifier.glassmorphicBackground(
-    blurRadius: Dp = 20.dp,
-    alpha: Float = 0.6f
-): Modifier = this.then(
-    if (Build.VERSION.SDK_INT >= 31) {
-        Modifier
-            .background(Color.White.copy(alpha = alpha))
-            .blur(blurRadius)
-    } else {
-        Modifier.background(Color.White.copy(alpha = alpha))
-    }
-)
+    alpha: Float = 0.3f
+): Modifier = this.then(Modifier.background(Color.White.copy(alpha = alpha)))
 
 val GlassShape = RoundedCornerShape(28.dp)
 

@@ -16,4 +16,5 @@ local.properties
 
 # Transient verification screenshots from CLI sessions
 /audit_*.png
+/diag_*.png
 /run_screenshot.png

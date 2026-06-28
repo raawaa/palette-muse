@@ -406,7 +406,7 @@ private fun HeroOrigin(photo: PhotoEntity) {
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(16.dp)
-                .glassmorphicBackground(alpha = 0.6f)
+                .glassmorphicBackground(alpha = 0.3f)
                 .clip(RoundedCornerShape(Dimens.pillShape))
                 .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(Dimens.pillShape))
                 .padding(horizontal = 16.dp, vertical = 8.dp),
@@ -478,7 +478,7 @@ private fun ExportPill(
                 spotColor = RoseGold.copy(alpha = 0.15f)
             )
             .clip(RoundedCornerShape(Dimens.pillShape))
-            .glassmorphicBackground(alpha = 0.6f)
+            .glassmorphicBackground(alpha = 0.3f)
             .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(Dimens.pillShape))
             .clickable(onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 16.dp),

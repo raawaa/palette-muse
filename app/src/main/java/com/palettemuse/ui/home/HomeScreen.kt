@@ -317,7 +317,7 @@ private fun ThemeCard(
                 modifier = Modifier
                     .size(48.dp) // M3 minimum 48dp touch target
                     .clip(CircleShape)
-                    .glassmorphicBackground(alpha = 0.6f)
+                    .glassmorphicBackground(alpha = 0.3f)
                     .border(0.5.dp, Color.White.copy(alpha = 0.4f), CircleShape)
                     .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center
@@ -403,7 +403,7 @@ private fun BottomNav(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                .glassmorphicBackground(alpha = 0.6f)
+                .glassmorphicBackground(alpha = 0.3f)
                 .border(
                     width = 0.5.dp,
                     color = Color.White.copy(alpha = 0.2f),
