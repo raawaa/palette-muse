@@ -146,7 +146,7 @@ fun ExportScreen(
                     data = uiState.data!!,
                     selectedTemplate = uiState.selectedTemplate,
                     onShare = { viewModel.sharePoster(context) },
-                    onSave = { viewModel.savePoster(context) },
+                    onSave = { viewModel.savePoster() },
                     onSelectTemplate = viewModel::selectTemplate,
                     onBack = onBack
                 )

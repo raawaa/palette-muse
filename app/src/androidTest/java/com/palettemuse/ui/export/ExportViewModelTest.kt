@@ -9,6 +9,7 @@ import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
 import com.palettemuse.core.PosterRenderer
 import com.palettemuse.data.local.AppDatabase
+import com.palettemuse.data.repository.PosterExporter
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeMatcher
 import com.palettemuse.ui.navigation.Routes
@@ -37,6 +38,7 @@ class ExportViewModelTest {
     private lateinit var repo: ThemeRepository
     private lateinit var context: Context
     private val renderer = PosterRenderer()
+    private lateinit var exporter: PosterExporter
     private val dispatcher = StandardTestDispatcher()
 
     @Before fun setup() {
@@ -48,6 +50,7 @@ class ExportViewModelTest {
             .setQueryExecutor(inlineExecutor)
             .build()
         repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()))
+        exporter = PosterExporter(context)
         Dispatchers.setMain(dispatcher)
     }
 
@@ -58,7 +61,7 @@ class ExportViewModelTest {
         repo.savePhotoToTheme(id, "/cap1.jpg", "#C99A92")
         repo.savePhotoToTheme(id, "/cap2.jpg", "#B98A82")
 
-        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
 
         val state = vm.uiState.first { !it.isLoading }
@@ -71,7 +74,7 @@ class ExportViewModelTest {
     }
 
     @Test fun missingTheme_emitsError() = runTest(dispatcher) {
-        val vm = ExportViewModel(Routes.Export("nope"), repo, renderer, context)
+        val vm = ExportViewModel(Routes.Export("nope"), repo, renderer, exporter)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
         assertNull(state.data)
@@ -82,7 +85,7 @@ class ExportViewModelTest {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         repeat(6) { i -> repo.savePhotoToTheme(id, "/cap$i.jpg", "#C99A92") }
 
-        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
         assertEquals(7, state.data?.photos?.size) // seed + 6 captures
@@ -93,7 +96,7 @@ class ExportViewModelTest {
     @Test fun selectTemplate_grid_updatesState() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         repeat(5) { i -> repo.savePhotoToTheme(id, "/p$i.jpg", "#DCA8A6") }
-        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
         vm.selectTemplate(PosterRenderer.TemplateType.GRID)
         advanceUntilIdle()
@@ -103,7 +106,7 @@ class ExportViewModelTest {
     @Test fun selectTemplate_minimal_updatesState() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         repeat(5) { i -> repo.savePhotoToTheme(id, "/p$i.jpg", "#DCA8A6") }
-        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
         vm.selectTemplate(PosterRenderer.TemplateType.MINIMAL)
         advanceUntilIdle()
@@ -113,7 +116,7 @@ class ExportViewModelTest {
     @Test
     fun sharePoster_generatesTemporaryFile() = runTest(dispatcher) {
         val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = ExportViewModel(Routes.Export(id), repo, renderer, context)
+        val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
         val bmp = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
         vm.setPreviewBitmapForTest(bmp)

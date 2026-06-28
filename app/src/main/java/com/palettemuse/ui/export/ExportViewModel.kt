@@ -5,10 +5,10 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Color
-import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.PosterRenderer
+import com.palettemuse.data.repository.PosterExporter
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeWithPhotos
 import com.palettemuse.ui.navigation.Routes
@@ -16,7 +16,6 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +54,7 @@ class ExportViewModel @AssistedInject constructor(
     @Assisted private val navKey: Routes.Export,
     private val themeRepository: ThemeRepository,
     private val posterRenderer: PosterRenderer,
-    @ApplicationContext private val context: Context
+    private val posterExporter: PosterExporter
 ) : ViewModel() {
 
     val themeId: String = navKey.themeId
@@ -140,7 +139,7 @@ class ExportViewModel @AssistedInject constructor(
             template = template
         )
         val preview = withContext(Dispatchers.Default) {
-            posterRenderer.render(null, config)
+            posterRenderer.render(config)
         }
         _uiState.value = _uiState.value.copy(previewBitmap = preview)
     }
@@ -181,11 +180,7 @@ class ExportViewModel @AssistedInject constructor(
         val bitmap = _uiState.value.previewBitmap ?: return
         viewModelScope.launch {
             try {
-                val uri = withContext(Dispatchers.IO) {
-                    val file = File(context.cacheDir, "poster_share.png")
-                    file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-                    FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
-                }
+                val uri = posterExporter.cacheForShare(bitmap)
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "image/png"
                     putExtra(Intent.EXTRA_STREAM, uri)
@@ -204,10 +199,10 @@ class ExportViewModel @AssistedInject constructor(
     }
 
     /** Saves the current preview Bitmap to the gallery; flips [ExportUiState.exportSuccess]. */
-    fun savePoster(context: Context) {
+    fun savePoster() {
         val bitmap = _uiState.value.previewBitmap ?: return
         viewModelScope.launch {
-            runCatching { posterRenderer.saveToGallery(context, bitmap) }
+            runCatching { posterExporter.saveToGallery(bitmap) }
                 .onSuccess { uri ->
                     _uiState.value = _uiState.value.copy(exportSuccess = uri != null)
                 }

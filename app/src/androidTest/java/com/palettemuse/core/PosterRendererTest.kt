@@ -24,7 +24,7 @@ class PosterRendererTest {
             template = PosterRenderer.TemplateType.GRID,
             photos = photos
         )
-        val result = renderer.render(null, config)
+        val result = renderer.render(config)
         assertNotNull(result)
         assertEquals(1080, result.width)
         assertEquals(1920, result.height)
@@ -37,7 +37,7 @@ class PosterRendererTest {
             template = PosterRenderer.TemplateType.FILM,
             photos = photos
         )
-        val result = renderer.render(null, config)
+        val result = renderer.render(config)
         assertNotNull(result)
         assertEquals(1080, result.width)
     }
@@ -49,7 +49,7 @@ class PosterRendererTest {
             template = PosterRenderer.TemplateType.JOURNAL,
             photos = photos
         )
-        val result = renderer.render(null, config)
+        val result = renderer.render(config)
         assertNotNull(result)
     }
 
@@ -60,7 +60,7 @@ class PosterRendererTest {
             template = PosterRenderer.TemplateType.MINIMAL,
             photos = photos
         )
-        val result = renderer.render(null, config)
+        val result = renderer.render(config)
         assertNotNull(result)
     }
 
@@ -71,7 +71,7 @@ class PosterRendererTest {
             template = PosterRenderer.TemplateType.FILM,
             photos = photos
         )
-        val result = renderer.render(null, config)
+        val result = renderer.render(config)
         assertNotNull(result)
         val pixel = result.getPixel(result.width / 2, (result.height * 0.9f).toInt())
         assertEquals(0xFFF5F5F0.toInt(), pixel)
@@ -84,7 +84,7 @@ class PosterRendererTest {
             template = PosterRenderer.TemplateType.JOURNAL,
             photos = photos
         )
-        val result = renderer.render(null, config)
+        val result = renderer.render(config)
         assertNotNull(result)
         val pixel = result.getPixel(result.width / 2, (result.height * 0.9f).toInt())
         assertEquals(0xFFFAF8F5.toInt(), pixel)
@@ -97,7 +97,7 @@ class PosterRendererTest {
             template = PosterRenderer.TemplateType.MINIMAL,
             photos = photos
         )
-        val result = renderer.render(null, config)
+        val result = renderer.render(config)
         assertNotNull(result)
         val pixel = result.getPixel(result.width / 2, (result.height * 0.9f).toInt())
         assertEquals(android.graphics.Color.WHITE, pixel)
@@ -110,7 +110,7 @@ class PosterRendererTest {
             template = PosterRenderer.TemplateType.GRID,
             photos = photos
         )
-        val result = renderer.render(null, config)
+        val result = renderer.render(config)
         assertNotNull(result)
         val pixel = result.getPixel(result.width / 2, (result.height * 0.9f).toInt())
         assertEquals(android.graphics.Color.WHITE, pixel)
