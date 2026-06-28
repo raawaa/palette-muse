@@ -10,32 +10,11 @@ import javax.inject.Singleton
 @Singleton
 class ColorAnalyzer @Inject constructor() {
 
-    data class AnalysisResult(
-        val primaryHex: String?,
-        val secondaryHex: String?,
-        val accentHex: String?,
-        val primarySwatch: Palette.Swatch?,
-        val secondarySwatch: Palette.Swatch?,
-        val accentSwatch: Palette.Swatch?
-    )
-
-    suspend fun analyze(bitmap: Bitmap): AnalysisResult = withContext(Dispatchers.Default) {
-        val palette = Palette.from(bitmap)
-            .maximumColorCount(12)
-            .clearFilters()
-            .resizeBitmapArea(96 * 96)
-            .generate()
-
-        AnalysisResult(
-            primaryHex = palette.vibrantSwatch?.rgb?.toHex(),
-            secondaryHex = palette.lightVibrantSwatch?.rgb?.toHex(),
-            accentHex = palette.mutedSwatch?.rgb?.toHex(),
-            primarySwatch = palette.vibrantSwatch,
-            secondarySwatch = palette.lightVibrantSwatch,
-            accentSwatch = palette.mutedSwatch
-        )
-    }
-
+    /**
+     * Returns the dominant color of [bitmap] as a `#RRGGBB` hex string (defaults to
+     * gray when Palette finds no dominant swatch). Palette quantization runs off the
+     * calling thread.
+     */
     suspend fun extractDominantHex(bitmap: Bitmap): String = withContext(Dispatchers.Default) {
         val palette = Palette.from(bitmap)
             .maximumColorCount(12)
