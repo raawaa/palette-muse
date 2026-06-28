@@ -1,26 +1,37 @@
-# Palette Muse — Domain Context
+# Palette Muse
 
-Ubiquitous language for Palette Muse. Code, issues, and design discussion should
-use these terms. Created lazily by `/domain-modeling`; grow it as terms get pinned.
+An app for capturing daily aesthetics — photos of outfits and objects — and
+curating them into personal color themes. This is the ubiquitous language for
+that domain.
 
-## Themes & matching
+## Language
 
-- **Theme** — a personal color theme: one representative color
-  (`representativeHex`) plus the photos captured against it. Persisted as
-  `ThemeEntity`. The unit the app curates and displays.
-- **Match score** — 0–100 proximity of a sample color to a theme's representative
-  color, derived from ΔE color distance (`ColorMatcher.matchPercentage`).
-- **Match threshold** — the cutoff (60) below which a color is *not* a match for a
-  theme. Owned by `ThemeMatcher`.
-- **ThemeMatcher** — owns the theme-match rule: given a list of themes and a sample
-  color, returns the best `ScoredTheme` whose score clears the match threshold, or
-  null. Pure (no I/O); callers choose the data source (DB read vs in-memory cache).
-- **ScoredTheme** — a `ThemeEntity` paired with its match score. The result of
-  `ThemeMatcher.bestMatch`; carries the score so callers don't recompute it.
+**Theme (主题)**:
+A curated color collection: one representative color plus the photos captured
+against it. The unit the app curates and the user browses.
+_Avoid_: palette (brand-only — the UI says 主题, not palette).
 
-## Flagged gaps (resolve later)
+**Representative color**:
+The single color that stands for a theme — the dominant color of its seed
+photo. The color a new capture is matched against, and the one that leads its
+swatches.
+_Avoid_: signature color, main color.
 
-- **Palette** is overloaded. `ThemeRepository.buildPalette` builds a *display
-  triptych* of real captured colors; the export poster's `adjustLightness` builds a
-  *tint ramp* of one color. Same word, different things — architecture-review
-  candidate E / a `/domain-modeling` question.
+**Match score**:
+A 0–100 measure of how close a captured color is to a theme's representative
+color, by perceptual color distance. Higher means closer.
+_Avoid_: similarity, percentage.
+
+**Match threshold**:
+The cutoff below which a captured color does not count as a match for a theme.
+_Avoid_: cutoff.
+
+**Swatches (色样)**:
+The colors that represent a theme at a glance: its representative color plus up
+to two standout colors actually captured into it. Describes what is in the theme.
+_Avoid_: palette, color set.
+
+**Shade ramp (渐暗色阶)**:
+A graduated set of darker shades of a single color, used to style a poster's
+color strip. Decorative — it ignores the theme's other captured colors.
+_Avoid_: palette, tint ramp.
