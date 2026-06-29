@@ -14,8 +14,13 @@ import javax.inject.Singleton
  * where the theme list comes from:
  *  - [ThemeRepository.findMatchingTheme] reads themes from the DB, then delegates.
  *  - `CaptureViewModel` runs it per camera frame against a cached theme list,
- *    because a DB read on every frame is too slow (this is the reason the rule
- *    used to be duplicated inline in both places).
+ *    because a DB read on every frame is too slow.
+ *
+ * Post-ADR-0001 both callers feed the **same** sample color — the Palette-quantized
+ * dominant hex from [com.palettemuse.core.ColorAnalyzer.extractDominantHex] — so the
+ * rule genuinely lives in one place. See
+ * `docs/adr/0003-themematcher-stays-class-threshold-private.md` for why this stays a
+ * class with a private threshold.
  *
  * @see ScoredTheme
  */

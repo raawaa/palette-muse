@@ -24,7 +24,7 @@ class CameraManager {
     private val executor: ExecutorService = Executors.newSingleThreadExecutor()
 
     interface FrameAnalyzer {
-        fun analyze(pixels: IntArray, width: Int, height: Int)
+        fun analyze(bitmap: Bitmap)
     }
 
     fun startCamera(
@@ -132,23 +132,23 @@ class CameraManager {
     }
 
     private fun analyzeFrame(imageProxy: ImageProxy, analyzer: FrameAnalyzer) {
-        // 由于设置了 OUTPUT_IMAGE_FORMAT_RGBA_8888，第一平面 = [A,R,G,B,A,R,G,B,...]
+        // OUTPUT_IMAGE_FORMAT_RGBA_8888 → planes[0] is a packed RGBA byte buffer.
         val buffer = imageProxy.planes[0].buffer
         val width = imageProxy.width
         val height = imageProxy.height
-        val pixels = IntArray(width * height)
-        val bytes = ByteArray(buffer.remaining())
-        buffer.get(bytes)
-
-        for (i in 0 until width * height) {
-            val offset = i * 4
-            val r = bytes[offset + 1].toInt() and 0xFF
-            val g = bytes[offset + 2].toInt() and 0xFF
-            val b = bytes[offset + 3].toInt() and 0xFF
-            pixels[i] = android.graphics.Color.rgb(r, g, b)
-        }
-
-        analyzer.analyze(pixels, width, height)
+        analyzer.analyze(rgbaBufferToBitmap(buffer, width, height))
         imageProxy.close()
+    }
+
+    /**
+     * Copies a packed RGBA [ByteBuffer] (as produced by CameraX
+     * `OUTPUT_IMAGE_FORMAT_RGBA_8888`) into an [Bitmap]. Exposed `internal` so the
+     * byte-order concern is unit-testable (see ADR-0001).
+     */
+    internal fun rgbaBufferToBitmap(buffer: ByteBuffer, width: Int, height: Int): Bitmap {
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        buffer.rewind()
+        bitmap.copyPixelsFromBuffer(buffer)
+        return bitmap
     }
 }

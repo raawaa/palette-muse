@@ -116,8 +116,8 @@ fun CaptureScreen(
             CameraPreview(
                 cameraManager = cameraManager,
                 lensFacing = uiState.lensFacing,
-                onFrameAnalyzed = { pixels, width, height ->
-                    viewModel.onFrameAnalyzed(pixels, width, height)
+                onFrameAnalyzed = { bitmap ->
+                    viewModel.onFrameAnalyzed(bitmap)
                 }
             )
         } else {
@@ -171,8 +171,10 @@ fun CaptureScreen(
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF524345)
                             )
+                            val target = uiState.targetTheme
                             Text(
-                                text = "${uiState.targetTheme.name} ${uiState.targetTheme.matchPct}% Match",
+                                text = if (target.isFallback) "未匹配到主题"
+                                       else "${target.name} ${target.matchPct}% Match",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = RoseGold
@@ -369,7 +371,7 @@ private fun CrosshairView() {
 fun CameraPreview(
     cameraManager: CameraManager,
     lensFacing: Int,
-    onFrameAnalyzed: (IntArray, Int, Int) -> Unit
+    onFrameAnalyzed: (Bitmap) -> Unit
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -387,8 +389,8 @@ fun CameraPreview(
                     previewView = previewView,
                     lensFacing = lensFacing,
                     frameAnalyzer = object : CameraManager.FrameAnalyzer {
-                        override fun analyze(pixels: IntArray, width: Int, height: Int) {
-                            onFrameAnalyzed(pixels, width, height)
+                        override fun analyze(bitmap: Bitmap) {
+                            onFrameAnalyzed(bitmap)
                         }
                     }
                 )

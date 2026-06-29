@@ -1,20 +1,22 @@
 package com.palettemuse.ui.capture
 
+import android.graphics.Bitmap
 import androidx.camera.core.CameraSelector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.ColorAnalyzer
-import com.palettemuse.core.ColorMatcher
 import com.palettemuse.data.model.ThemeEntity
 import com.palettemuse.data.repository.PhotoStorage
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeMatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 data class TargetState(val name: String, val matchPct: Int, val isFallback: Boolean)
 
@@ -29,7 +31,7 @@ data class CaptureUiState(
     val lensFacing: Int = CameraSelector.LENS_FACING_BACK,
     val isAnalyzing: Boolean = false,
     val pendingCapture: PendingCapture? = null,
-    val targetTheme: TargetState = TargetState("Rose Gold", 0, isFallback = true)
+    val targetTheme: TargetState = TargetState("", 0, isFallback = true)
 )
 
 @HiltViewModel
@@ -37,7 +39,6 @@ class CaptureViewModel @Inject constructor(
     private val themeRepository: ThemeRepository,
     private val colorAnalyzer: ColorAnalyzer,
     private val photoStorage: PhotoStorage,
-    private val colorMatcher: ColorMatcher,
     private val themeMatcher: ThemeMatcher
 ) : ViewModel() {
 
@@ -52,14 +53,14 @@ class CaptureViewModel @Inject constructor(
         }
     }
 
-    fun onFrameAnalyzed(pixels: IntArray, width: Int, height: Int) {
+    fun onFrameAnalyzed(bitmap: Bitmap) {
         if (_themes.value.isEmpty()) return // 等待 themes 缓存就绪 (首帧 themes 可能未加载)
-        val sampleHex = colorMatcher.extractCenterAverageColor(pixels, width, height)
+        val sampleHex = colorAnalyzer.extractDominantHex(bitmap)
         val best = themeMatcher.bestMatch(_themes.value, sampleHex)
         val target = if (best != null) {
             TargetState(best.theme.name, best.score, isFallback = false)
         } else {
-            TargetState("Rose Gold", 0, isFallback = true)
+            TargetState("", 0, isFallback = true)
         }
         _uiState.value = _uiState.value.copy(
             targetTheme = target,
@@ -67,11 +68,12 @@ class CaptureViewModel @Inject constructor(
         )
     }
 
-    fun capturePhoto(bitmap: android.graphics.Bitmap) {
+    fun capturePhoto(bitmap: Bitmap) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isAnalyzing = true)
-            val imagePath = photoStorage.save(bitmap)
-            val dominantHex = colorAnalyzer.extractDominantHex(bitmap)
+            val (imagePath, dominantHex) = withContext(Dispatchers.Default) {
+                photoStorage.save(bitmap) to colorAnalyzer.extractDominantHex(bitmap)
+            }
             val matched = themeRepository.findMatchingTheme(dominantHex)
             _uiState.value = _uiState.value.copy(
                 isAnalyzing = false,

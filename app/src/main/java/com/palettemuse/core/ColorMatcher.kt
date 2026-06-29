@@ -27,41 +27,6 @@ class ColorMatcher @Inject constructor() {
         return (100.0 - deltaE * 2.5).toInt().coerceIn(0, 100)
     }
 
-    /**
-     * 从 Bitmap 中心区域提取平均色
-     */
-    fun extractCenterAverageColor(pixels: IntArray, width: Int, height: Int): String {
-        val centerX = width / 2
-        val centerY = height / 2
-        val sampleSize = minOf(width, height) / 4
-
-        var r = 0L
-        var g = 0L
-        var b = 0L
-        var count = 0
-
-        for (y in (centerY - sampleSize) until (centerY + sampleSize)) {
-            for (x in (centerX - sampleSize) until (centerX + sampleSize)) {
-                if (y in 0 until height && x in 0 until width) {
-                    val pixel = pixels[y * width + x]
-                    r += Color.red(pixel)
-                    g += Color.green(pixel)
-                    b += Color.blue(pixel)
-                    count++
-                }
-            }
-        }
-
-        if (count == 0) return "#808080"
-
-        val hex = "#%02X%02X%02X".format(
-            (r / count).toInt(),
-            (g / count).toInt(),
-            (b / count).toInt()
-        )
-        return hex
-    }
-
     private fun rgbToLab(rgb: Int): DoubleArray {
         val r = srgbLinearize(Color.red(rgb) / 255.0)
         val g = srgbLinearize(Color.green(rgb) / 255.0)

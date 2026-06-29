@@ -1,6 +1,8 @@
 package com.palettemuse.ui.capture
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Color
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -21,6 +23,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -56,7 +59,7 @@ class CaptureViewModelTest {
 
     @Test
     fun confirmCapture_createsThemeWhenNoMatch() = runTest(dispatcher) {
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
+        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
         vm.setPending(PendingCapture("/cap.jpg", "#DCA8A6", matchedTheme = null))
         vm.confirmCapture()
         advanceUntilIdle()
@@ -68,7 +71,7 @@ class CaptureViewModelTest {
     fun confirmCapture_joinsThemeWhenMatched() = runTest(dispatcher) {
         val seedId = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         val matched = repo.findMatchingTheme("#DCB0A8")!!
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
+        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
         vm.setPending(PendingCapture("/cap.jpg", "#DCB0A8", matched))
         vm.confirmCapture()
         advanceUntilIdle()
@@ -80,7 +83,7 @@ class CaptureViewModelTest {
     fun saveAsNewTheme_createsSeparateThemeEvenWhenMatched() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         val matched = repo.findMatchingTheme("#DCB0A8")!!
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
+        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
         vm.setPending(PendingCapture("/cap.jpg", "#DCB0A8", matched))
         vm.saveAsNewTheme()
         advanceUntilIdle()
@@ -91,10 +94,11 @@ class CaptureViewModelTest {
     @Test
     fun onFrameAnalyzed_picksClosestTheme() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
         advanceUntilIdle()  // drain init's themes collector before analyzing a frame
-        val pixels = IntArray(100) { 0xFFDCA8A6.toInt() }  // exact hex match
-        vm.onFrameAnalyzed(pixels, 10, 10)
+        // Same extractor as the shutter path: Palette quantizes a solid #DCA8A6 to
+        // ~#D8A8A0, still close enough to the seed theme to clear MATCH_THRESHOLD.
+        vm.onFrameAnalyzed(solidBitmap("#DCA8A6"))
         advanceUntilIdle()
         val target = vm.uiState.value.targetTheme
         // Theme name comes from ColorNamer.hash(#DCA8A6) — assert behaviour, not label.
@@ -104,27 +108,29 @@ class CaptureViewModelTest {
     }
 
     @Test
-    fun onFrameAnalyzed_fallbackRoseGoldWhenNoMatch() = runTest(dispatcher) {
+    fun onFrameAnalyzed_fallbackIsHonestWhenNoMatch() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
         advanceUntilIdle()  // drain init's themes collector before analyzing a frame
-        val pixels = IntArray(100) { 0xFF00FF00.toInt() }  // 亮绿 vs Dusty Rose → 大 ΔE → fallback
-        vm.onFrameAnalyzed(pixels, 10, 10)
+        vm.onFrameAnalyzed(solidBitmap("#00FF00"))  // 亮绿 vs Dusty Rose → 大 ΔE → fallback
         advanceUntilIdle()
         val target = vm.uiState.value.targetTheme
         assertTrue(target.isFallback)
-        assertEquals("Rose Gold", target.name)
-        assertEquals(0, target.matchPct)
+        assertNotEquals("Rose Gold", target.name)  // no brand-color masquerade
     }
 
     @Test
     fun onFrameAnalyzed_skipsWhenNoThemes() = runTest(dispatcher) {
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ColorMatcher(), ThemeMatcher(ColorMatcher()))
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
         advanceUntilIdle() // init collect completes (empty _themes)
         val before = vm.uiState.value.targetTheme
-        val pixels = IntArray(100) { 0xFFDCA8A6.toInt() }
-        vm.onFrameAnalyzed(pixels, 10, 10)
+        vm.onFrameAnalyzed(solidBitmap("#DCA8A6"))
         advanceUntilIdle()
         assertEquals(before, vm.uiState.value.targetTheme) // unchanged (skipped)
     }
+
+    private fun solidBitmap(hex: String): Bitmap =
+        Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888).apply {
+            eraseColor(Color.parseColor(hex))
+        }
 }
