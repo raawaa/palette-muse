@@ -23,7 +23,6 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -116,7 +115,7 @@ class CaptureViewModelTest {
         advanceUntilIdle()
         val target = vm.uiState.value.targetTheme
         assertTrue(target.isFallback)
-        assertNotEquals("Rose Gold", target.name)  // no brand-color masquerade
+        assertEquals("", target.name)  // fallback carries no masquerading theme name
     }
 
     @Test
