@@ -5,9 +5,6 @@ import androidx.room.Room
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.local.PhotoDao
 import com.palettemuse.data.local.ThemeDao
-import com.palettemuse.data.repository.InternalPhotoStorage
-import com.palettemuse.data.repository.PhotoStorage
-import dagger.Binds
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -36,12 +33,4 @@ object AppModule {
 
     @Provides
     fun providePhotoDao(database: AppDatabase): PhotoDao = database.photoDao()
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class PhotoStorageModule {
-    @Binds
-    @Singleton
-    abstract fun bindPhotoStorage(impl: InternalPhotoStorage): PhotoStorage
 }

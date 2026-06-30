@@ -10,7 +10,7 @@ import com.palettemuse.core.ColorAnalyzer
 import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
 import com.palettemuse.data.local.AppDatabase
-import com.palettemuse.data.repository.InternalPhotoStorage
+import com.palettemuse.data.repository.PhotoStorage
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeMatcher
 import kotlinx.coroutines.Dispatchers
@@ -33,7 +33,7 @@ import org.junit.runner.RunWith
 class CaptureViewModelTest {
     private lateinit var db: AppDatabase
     private lateinit var repo: ThemeRepository
-    private lateinit var storage: InternalPhotoStorage
+    private lateinit var storage: PhotoStorage
     private val dispatcher = StandardTestDispatcher()
 
     @Before fun setup() {
@@ -50,7 +50,7 @@ class CaptureViewModelTest {
             .setQueryExecutor(inlineExecutor)
             .build()
         repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()))
-        storage = InternalPhotoStorage(ctx)
+        storage = PhotoStorage(ctx)
         Dispatchers.setMain(dispatcher)
     }
 
