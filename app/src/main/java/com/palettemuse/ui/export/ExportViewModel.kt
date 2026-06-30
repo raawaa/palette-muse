@@ -27,7 +27,7 @@ import kotlinx.coroutines.withContext
 /**
  * UI state for the Export screen.
  *
- * @param data the loaded [ThemeWithPhotos] (theme + photos + swatches) or null when missing / loading.
+ * @param data the loaded [ThemeWithPhotos] (theme + photos) or null when missing / loading.
  * @param selectedTemplate the currently active template chip. All 4 templates are selectable in Plan 3.
  * @param previewBitmap the composed poster Bitmap used for save / share.
  *                       Built with [PosterRenderer.render] from photos picked per template +

@@ -15,8 +15,7 @@ import kotlinx.coroutines.flow.mapLatest
 
 data class ThemeWithPhotos(
     val theme: ThemeEntity,
-    val photos: List<PhotoEntity>,
-    val swatches: List<String>
+    val photos: List<PhotoEntity>
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -73,7 +72,7 @@ class ThemeRepository @Inject constructor(
         themeDao.getAllThemes().mapLatest { themes ->
             themes.map { theme ->
                 val photos = photoDao.getPhotosForThemeOnce(theme.id)
-                ThemeWithPhotos(theme, photos, buildSwatches(theme, photos))
+                ThemeWithPhotos(theme, photos)
             }
         }
 
@@ -85,14 +84,14 @@ class ThemeRepository @Inject constructor(
     fun getAllThemes(): Flow<List<ThemeEntity>> = themeDao.getAllThemes()
 
     /**
-     * Loads a single theme together with its photos and built swatches.
-     * Used by ThemeDetailScreen to render the swatches header + Hero + masonry grid.
+     * Loads a single theme together with its photos.
+     * Used by ThemeDetailScreen to render the color dot header + Hero + masonry grid.
      * Returns null when the theme id does not exist.
      */
     suspend fun getThemeWithPhotos(id: String): ThemeWithPhotos? {
         val theme = themeDao.getTheme(id) ?: return null
         val photos = photoDao.getPhotosForThemeOnce(id)
-        return ThemeWithPhotos(theme, photos, buildSwatches(theme, photos))
+        return ThemeWithPhotos(theme, photos)
     }
 
     suspend fun renameTheme(id: String, name: String) {

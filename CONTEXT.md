@@ -59,10 +59,12 @@ _Avoid_: similarity, percentage.
 The cutoff below which a captured color does not count as a match for a theme.
 _Avoid_: cutoff.
 
-**Swatches (色样)**:
-The colors that represent a theme at a glance: its representative color plus up
-to two standout colors actually captured into it. Describes what is in the theme.
-_Avoid_: palette, color set.
+**Swatches (色样)** — _removed_.
+The "representative color plus up to two standout colors" construct did not survive
+re-examination of the product story (capture a look, then in daily life find and capture
+items that match the look's color — color is a by-product of the photo, never user-picked).
+Color variety is conveyed by the photos themselves; the only color identity the theme needs
+is its representative color. See `docs/adr/0004-swatches-removed-representative-color-is-single-identity.md`.
 
 **Poster (海报)**:
 A theme's exportable composite image. It takes a selection of that theme's

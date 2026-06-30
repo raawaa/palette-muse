@@ -216,7 +216,7 @@ fun HomeScreen(
 }
 
 // ===================================================================
-// Theme Card — large single-column image card with real swatches dots
+// Theme Card — large single-column image card with representative color dot
 // ===================================================================
 
 @Composable
@@ -278,21 +278,14 @@ private fun ThemeCard(
             verticalAlignment = Alignment.Bottom
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                // Real swatches dots + theme name
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    themeWithPhotos.swatches.forEach { hex ->
-                        Box(
-                            Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .border(0.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
-                                .background(parseHex(hex))
-                        )
-                    }
-                }
+                // Representative color dot + theme name
+                Box(
+                    Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .border(0.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                        .background(parseHex(theme.representativeHex))
+                )
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = theme.name,
