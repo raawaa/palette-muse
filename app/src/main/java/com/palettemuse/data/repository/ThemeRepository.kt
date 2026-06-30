@@ -5,7 +5,6 @@ import com.palettemuse.data.local.PhotoDao
 import com.palettemuse.data.local.ThemeDao
 import com.palettemuse.data.model.PhotoEntity
 import com.palettemuse.data.model.ThemeEntity
-import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,7 +23,8 @@ class ThemeRepository @Inject constructor(
     private val themeDao: ThemeDao,
     private val photoDao: PhotoDao,
     private val colorNamer: ColorNamer,
-    private val themeMatcher: ThemeMatcher
+    private val themeMatcher: ThemeMatcher,
+    private val themeFactory: ThemeFactory
 ) {
     suspend fun findMatchingTheme(hex: String): ThemeEntity? =
         themeMatcher.bestMatch(themeDao.getAllThemes().first(), hex)?.theme
@@ -32,40 +32,18 @@ class ThemeRepository @Inject constructor(
     suspend fun savePhotoToTheme(
         themeId: String,
         imagePath: String,
-        dominantHex: String,
-        isSeed: Boolean = false
+        dominantHex: String
     ) {
-        photoDao.insert(
-            PhotoEntity(
-                id = UUID.randomUUID().toString(),
-                themeId = themeId,
-                imagePath = imagePath,
-                dominantHex = dominantHex,
-                isSeed = isSeed
-            )
-        )
+        photoDao.insert(themeFactory.createCapture(themeId, dominantHex, imagePath))
         touchTheme(themeId)
     }
 
     suspend fun createThemeAndSave(imagePath: String, dominantHex: String): String {
-        val themeId = UUID.randomUUID().toString()
-        themeDao.insert(
-            ThemeEntity(
-                id = themeId,
-                name = colorNamer.nameColor(dominantHex),
-                representativeHex = dominantHex
-            )
-        )
-        photoDao.insert(
-            PhotoEntity(
-                id = UUID.randomUUID().toString(),
-                themeId = themeId,
-                imagePath = imagePath,
-                dominantHex = dominantHex,
-                isSeed = true
-            )
-        )
-        return themeId
+        val name = colorNamer.nameColor(dominantHex)
+        val (theme, photo) = themeFactory.createSeed(name, dominantHex, imagePath)
+        themeDao.insert(theme)
+        photoDao.insert(photo)
+        return theme.id
     }
 
     fun getAllThemesWithPhotos(): Flow<List<ThemeWithPhotos>> =

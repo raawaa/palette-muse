@@ -9,8 +9,9 @@ import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
 import com.palettemuse.core.PosterRenderer
 import com.palettemuse.data.local.AppDatabase
-import com.palettemuse.data.repository.PosterExporter
+import com.palettemuse.data.repository.BitmapStorage
 import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.data.repository.ThemeFactory
 import com.palettemuse.data.repository.ThemeMatcher
 import com.palettemuse.ui.navigation.Routes
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -38,7 +39,7 @@ class ExportViewModelTest {
     private lateinit var repo: ThemeRepository
     private lateinit var context: Context
     private val renderer = PosterRenderer()
-    private lateinit var exporter: PosterExporter
+    private lateinit var exporter: BitmapStorage
     private val dispatcher = StandardTestDispatcher()
 
     @Before fun setup() {
@@ -49,8 +50,8 @@ class ExportViewModelTest {
             .setTransactionExecutor(inlineExecutor)
             .setQueryExecutor(inlineExecutor)
             .build()
-        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()))
-        exporter = PosterExporter(context)
+        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()), ThemeFactory())
+        exporter = BitmapStorage(context)
         Dispatchers.setMain(dispatcher)
     }
 

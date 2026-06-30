@@ -1,6 +1,5 @@
 package com.palettemuse.core
 
-import android.graphics.Color
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -8,7 +7,6 @@ import javax.inject.Singleton
 class ColorNamer @Inject constructor() {
 
     private data class HueRange(val start: Float, val end: Float, val name: String)
-    private data class MoodWord(val name: String)
 
     private val hueRanges = listOf(
         HueRange(0f, 15f, "Red"),
@@ -35,17 +33,15 @@ class ColorNamer @Inject constructor() {
     )
 
     fun nameColor(hexColor: String): String {
-        val rgb = Color.parseColor(hexColor)
-        val hue = FloatArray(3).also { Color.colorToHSV(rgb, it) }[0]
-        val saturation = FloatArray(3).also { Color.colorToHSV(rgb, it) }[1]
-        val value = FloatArray(3).also { Color.colorToHSV(rgb, it) }[2]
+        val rgb = parseHexRgb(hexColor)
+        val hsv = hsvFromRgb(rgb.r, rgb.g, rgb.b)
 
-        val hueName = hueRanges.first { hue in it.start..it.end }.name
+        val hueName = hueRanges.first { hsv.hue in it.start..it.end }.name
         val moodList = moodWords[hueName] ?: moodWords.values.flatten()
-        val mood = moodList[(hue.toInt() + saturation.toInt()) % moodList.size]
+        val mood = moodList[(hsv.hue.toInt() + hsv.saturation.toInt()) % moodList.size]
 
-        val baseName = if (value < 0.3f || saturation < 0.15f) {
-            baseNames[(hue.toInt() + (saturation * 10).toInt()) % baseNames.size]
+        val baseName = if (hsv.value < 0.3f || hsv.saturation < 0.15f) {
+            baseNames[(hsv.hue.toInt() + (hsv.saturation * 10).toInt()) % baseNames.size]
         } else {
             hueName
         }

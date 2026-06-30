@@ -7,8 +7,6 @@ import javax.inject.Singleton
 @Singleton
 class ColorMatcher @Inject constructor() {
 
-    private data class Rgb(val r: Int, val g: Int, val b: Int)
-
     /**
      * Computes the CIELAB ΔE between [targetHex] and [sampleHex] and returns a
      * 0–100 match percentage. Pure — no Android framework calls; see ADR 0006.
@@ -27,13 +25,6 @@ class ColorMatcher @Inject constructor() {
         )
 
         return (100.0 - deltaE * 2.5).toInt().coerceIn(0, 100)
-    }
-
-    private fun parseHexRgb(hex: String): Rgb {
-        val s = if (hex.startsWith("#")) hex.drop(1) else hex
-        require(s.length == 6) { "Hex must be #RRGGBB, was: $hex" }
-        val v = s.toInt(16)
-        return Rgb((v shr 16) and 0xFF, (v shr 8) and 0xFF, v and 0xFF)
     }
 
     private fun rgbToLab(rgb: Rgb): DoubleArray {

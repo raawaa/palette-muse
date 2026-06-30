@@ -8,7 +8,7 @@ import android.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.PosterRenderer
-import com.palettemuse.data.repository.PosterExporter
+import com.palettemuse.data.repository.BitmapStorage
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeWithPhotos
 import com.palettemuse.ui.navigation.Routes
@@ -54,7 +54,7 @@ class ExportViewModel @AssistedInject constructor(
     @Assisted private val navKey: Routes.Export,
     private val themeRepository: ThemeRepository,
     private val posterRenderer: PosterRenderer,
-    private val posterExporter: PosterExporter
+    private val bitmapStorage: BitmapStorage
 ) : ViewModel() {
 
     val themeId: String = navKey.themeId
@@ -180,7 +180,7 @@ class ExportViewModel @AssistedInject constructor(
         val bitmap = _uiState.value.previewBitmap ?: return
         viewModelScope.launch {
             try {
-                val uri = posterExporter.cacheForShare(bitmap)
+                val uri = bitmapStorage.cacheForShare(bitmap)
                 val intent = Intent(Intent.ACTION_SEND).apply {
                     type = "image/png"
                     putExtra(Intent.EXTRA_STREAM, uri)
@@ -202,7 +202,7 @@ class ExportViewModel @AssistedInject constructor(
     fun savePoster() {
         val bitmap = _uiState.value.previewBitmap ?: return
         viewModelScope.launch {
-            runCatching { posterExporter.saveToGallery(bitmap) }
+            runCatching { bitmapStorage.saveToGallery(bitmap) }
                 .onSuccess { uri ->
                     _uiState.value = _uiState.value.copy(exportSuccess = uri != null)
                 }

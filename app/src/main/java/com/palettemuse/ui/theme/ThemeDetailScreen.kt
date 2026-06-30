@@ -68,14 +68,11 @@ import com.palettemuse.theme.PlusJakartaSans
 import com.palettemuse.theme.PrimaryDesign
 import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.SurfaceWhite
+import com.palettemuse.ui.util.parseHex
+import com.palettemuse.ui.util.relativeTimeLabel
 
 
 // Aura Aesthetic color tokens are imported from theme/Color.kt — do not redefine here.
-
-/** Parses a hex string ("#RRGGBB") into a Compose Color, falling back to rose gold. */
-private fun parseHex(hex: String): Color = runCatching {
-    Color(android.graphics.Color.parseColor(hex))
-}.getOrDefault(RoseGold)
 
 /** Parses a hex string ("#RRGGBB") into an Int color, or null on failure. */
 private fun parseHexOrNull(hex: String): Int? = try {
@@ -87,16 +84,6 @@ private fun parseHexOrNull(hex: String): Int? = try {
 /** Parses a hex string into a Compose [Color], falling back to rose gold (#B76E79). */
 private fun parseHexOrRoseGold(hex: String): Color =
     Color(parseHexOrNull(hex) ?: android.graphics.Color.parseColor("#B76E79"))
-
-/** Formats the theme's relative time as a Chinese label (今日更新 / 昨日 / N天前). */
-private fun relativeTimeLabel(epoch: Long): String {
-    val days = ((System.currentTimeMillis() - epoch) / 86_400_000L).toInt()
-    return when {
-        days <= 0 -> "今日更新"
-        days == 1 -> "昨日"
-        else -> "${days}天前"
-    }
-}
 
 @Composable
 fun ThemeDetailScreen(

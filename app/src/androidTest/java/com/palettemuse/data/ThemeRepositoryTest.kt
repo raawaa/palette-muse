@@ -5,6 +5,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.data.repository.ThemeFactory
 import com.palettemuse.data.repository.ThemeMatcher
 import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
@@ -26,7 +27,7 @@ class ThemeRepositoryTest {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         db = Room.inMemoryDatabaseBuilder(ctx, AppDatabase::class.java)
             .allowMainThreadQueries().build()
-        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()))
+        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()), ThemeFactory())
     }
 
     @After

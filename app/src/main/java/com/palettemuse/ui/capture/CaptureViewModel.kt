@@ -6,7 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.ColorAnalyzer
 import com.palettemuse.data.model.ThemeEntity
-import com.palettemuse.data.repository.PhotoStorage
+import com.palettemuse.data.repository.BitmapStorage
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeMatcher
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,7 +38,7 @@ data class CaptureUiState(
 class CaptureViewModel @Inject constructor(
     private val themeRepository: ThemeRepository,
     private val colorAnalyzer: ColorAnalyzer,
-    private val photoStorage: PhotoStorage,
+    private val bitmapStorage: BitmapStorage,
     private val themeMatcher: ThemeMatcher
 ) : ViewModel() {
 
@@ -72,7 +72,7 @@ class CaptureViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isAnalyzing = true)
             val (imagePath, dominantHex) = withContext(Dispatchers.Default) {
-                photoStorage.save(bitmap) to colorAnalyzer.extractDominantHex(bitmap)
+                bitmapStorage.saveCapture(bitmap) to colorAnalyzer.extractDominantHex(bitmap)
             }
             val matched = themeRepository.findMatchingTheme(dominantHex)
             _uiState.value = _uiState.value.copy(

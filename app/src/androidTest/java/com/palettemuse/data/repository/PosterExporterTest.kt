@@ -12,15 +12,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Exercises PosterExporter through its own seam (the one the split exists to create).
- * cacheForShare is deterministic; saveToGallery's MediaStore write is checked on Q+,
- * where the emulator grants it without an explicit storage permission.
- */
 @RunWith(AndroidJUnit4::class)
 class PosterExporterTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
-    private val exporter = PosterExporter(context)
+    private val exporter = BitmapStorage(context)
 
     @Test
     fun cacheForShare_writesPngAndReturnsContentUri() = runTest {

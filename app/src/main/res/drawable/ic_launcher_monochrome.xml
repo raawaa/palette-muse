@@ -3,33 +3,30 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Stylized M / Lens representing Muse and Palette -->
+    <!-- Stylized M / Lens -->
     <path
         android:fillColor="#00000000"
         android:pathData="M32.9,75.1C32.9,75.1 39.2,45.6 54.0,45.6C68.8,45.6 75.1,75.1 75.1,75.1"
-        android:strokeColor="#B76E79"
+        android:strokeColor="#000000"
         android:strokeWidth="5.1"
         android:strokeLineCap="round"
         android:strokeLineJoin="round" />
-    <!-- Central color circle -->
+    <!-- Central circle -->
     <path
-        android:fillColor="#B76E79"
+        android:fillColor="#000000"
         android:pathData="M45.6,60.3A8.4,8.4 0 1,1 62.4,60.3A8.4,8.4 0 1,1 45.6,60.3" />
     <!-- Top accent circle -->
     <path
-        android:fillColor="#E6E6FA"
+        android:fillColor="#000000"
         android:pathData="M49.8,32.9A4.2,4.2 0 1,1 58.2,32.9A4.2,4.2 0 1,1 49.8,32.9" />
     <!-- Palette dots -->
     <path
-        android:fillColor="#B76E79"
-        android:alpha="0.6"
+        android:fillColor="#000000"
         android:pathData="M36.7,75.1A2.5,2.5 0 1,1 41.7,75.1A2.5,2.5 0 1,1 36.7,75.1" />
     <path
-        android:fillColor="#B76E79"
-        android:alpha="0.8"
+        android:fillColor="#000000"
         android:pathData="M51.5,79.3A2.5,2.5 0 1,1 56.5,79.3A2.5,2.5 0 1,1 51.5,79.3" />
     <path
-        android:fillColor="#B76E79"
-        android:alpha="0.6"
+        android:fillColor="#000000"
         android:pathData="M66.3,75.1A2.5,2.5 0 1,1 71.3,75.1A2.5,2.5 0 1,1 66.3,75.1" />
 </vector>

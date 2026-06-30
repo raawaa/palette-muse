@@ -62,24 +62,8 @@ import com.palettemuse.theme.SurfaceLow
 import com.palettemuse.theme.SurfaceTint
 import com.palettemuse.theme.SurfaceWhite
 import com.palettemuse.theme.TertiaryFixedDim
-
-
-// Aura Aesthetic color tokens now live in theme/Color.kt (shared across screens).
-
-/** Parses a hex string ("#RRGGBB") into a Compose Color, falling back to rose gold. */
-private fun parseHex(hex: String): Color = runCatching {
-    Color(android.graphics.Color.parseColor(hex))
-}.getOrDefault(RoseGold)
-
-/** Formats the theme's relative time as a Chinese label (今日更新 / N天前). */
-private fun relativeTimeLabel(epoch: Long): String {
-    val days = ((System.currentTimeMillis() - epoch) / 86_400_000L).toInt()
-    return when {
-        days <= 0 -> "今日更新"
-        days == 1 -> "昨日"
-        else -> "${days}天前"
-    }
-}
+import com.palettemuse.ui.util.parseHex
+import com.palettemuse.ui.util.relativeTimeLabel
 
 @Composable
 fun HomeScreen(

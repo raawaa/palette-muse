@@ -75,14 +75,10 @@ import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.RoseGoldDark
 import com.palettemuse.theme.SurfaceLow
 import com.palettemuse.theme.SurfaceWhite
+import com.palettemuse.ui.util.parseHex
 
 
 // Aura Aesthetic color tokens are imported from theme/Color.kt — do not redefine here.
-
-/** Parses a hex string ("#RRGGBB") into a Compose Color, falling back to rose gold. */
-private fun parseHex(hex: String): Color = runCatching {
-    Color(android.graphics.Color.parseColor(hex))
-}.getOrDefault(RoseGold)
 
 /** Human-readable Chinese label for each [PosterRenderer.TemplateType] (chip + a11y). */
 private fun PosterRenderer.TemplateType.label(): String = when (this) {

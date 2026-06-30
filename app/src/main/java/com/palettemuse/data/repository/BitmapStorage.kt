@@ -16,29 +16,19 @@ import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/**
- * Owns poster output: turns a rendered Bitmap into a durable or shareable Uri.
- * Aggregates PNG encode + disk/Uri 写入 (Q+ MediaStore; Android-9 FileProvider 回退).
- *
- * Both methods are suspending and offload the heavy PNG encode to [Dispatchers.IO];
- * save used to run the encode on the Main dispatcher (fixed here).
- *
- * The caller owns building the share Intent and launching the chooser — those need
- * an Activity context, which this module does not hold.
- */
 @Singleton
-class PosterExporter @Inject constructor(
+class BitmapStorage @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    suspend fun saveCapture(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+        val dir = File(context.filesDir, "captures").apply { mkdirs() }
+        val file = File(dir, "capture_${System.currentTimeMillis()}.jpg")
+        FileOutputStream(file).use { fos ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, fos)
+        }
+        file.absolutePath
+    }
 
-    /**
-     * Writes [bitmap] to the gallery (PaletteMuse/ under Pictures); returns its Uri,
-     * or null if MediaStore refused the insert.
-     *
-     * Preserves the Android 9- external-file fallback verbatim. NOTE: that branch's
-     * FileProvider root (external Pictures dir) is not declared in `file_paths.xml`,
-     * so it would throw on pre-Q — a latent bug tracked separately, not fixed here.
-     */
     suspend fun saveToGallery(bitmap: Bitmap): Uri? = withContext(Dispatchers.IO) {
         val filename = "PaletteMuse_${System.currentTimeMillis()}.png"
 
@@ -64,7 +54,6 @@ class PosterExporter @Inject constructor(
 
             uri
         } else {
-            // Android 9-: 写入外部存储
             val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
             val paletteDir = File(picturesDir, "PaletteMuse").apply { mkdirs() }
             val file = File(paletteDir, filename)
@@ -75,10 +64,6 @@ class PosterExporter @Inject constructor(
         }
     }
 
-    /**
-     * Encodes [bitmap] to a cache PNG and returns a FileProvider Uri for
-     * [Intent.ACTION_SEND]. Caller builds the Intent and launches the chooser.
-     */
     suspend fun cacheForShare(bitmap: Bitmap): Uri = withContext(Dispatchers.IO) {
         val file = File(context.cacheDir, "poster_share.png")
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
