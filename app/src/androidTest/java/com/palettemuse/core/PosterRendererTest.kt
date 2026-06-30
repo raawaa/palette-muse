@@ -20,7 +20,7 @@ class PosterRendererTest {
         val photos = List(4) { stubPhoto(Color.RED) }
         val config = PosterRenderer.PosterConfig(
             title = "Test Grid",
-            primaryColor = Color.RED,
+            baseColor = Color.RED,
             template = PosterRenderer.TemplateType.GRID,
             photos = photos
         )
