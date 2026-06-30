@@ -110,11 +110,4 @@ class ThemeRepository @Inject constructor(
             themeDao.update(it.copy(updatedAt = System.currentTimeMillis()))
         }
     }
-
-    private fun buildSwatches(theme: ThemeEntity, photos: List<PhotoEntity>): List<String> {
-        val distinct = photos.map { it.dominantHex }
-            .distinct()
-            .filter { it != theme.representativeHex }
-        return listOf(theme.representativeHex) + distinct.take(2)
-    }
 }
