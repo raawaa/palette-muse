@@ -1,8 +1,6 @@
 package com.palettemuse.theme
 
 import android.app.Activity
-import android.graphics.RenderEffect
-import android.graphics.Shader
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,10 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.asComposeRenderEffect
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
@@ -65,33 +60,22 @@ private val LightColorScheme = lightColorScheme(
 )
 
 // ===================================================================
-// Glassmorphic overlay for TopAppBar / BottomBar / pills
+// Translucent overlays for bars and pills
 // -------------------------------------------------------------------
-// Implementation note: the blur sits on a `graphicsLayer` with
-// `compositingStrategy = Offscreen`, so the layer's content (including
-// children drawn into it) is rendered to an offscreen buffer and
-// post-processed with a `RenderEffect.createBlurEffect` before composite.
-// The accompanying translucent fill gives the surface its "frosted"
-// tint; the blur does the visual work of softening whatever sits on the
-// overlay.
+// Historically `glassmorphicBackground()` lived here. It was a translucent
+// white fill wearing a glass-themed name; the apps using it only got a
+// flat box with content bleeding through at ~30% alpha. The cost of
+// delivering an actual frosted-glass surface (true backdrop blur) was
+// 16-22 hours of engineering for ~50 ms of perceived polish per pill,
+// and was declined per ADR-0011. The modifier is now gone; the Aura
+// Aesthetic retains its Rose Gold + Playfair × Plus Jakarta Sans
+// identity without leaning on a glass-y overlay.
 //
-// Composability: callers continue to apply `.clip(RoundedCornerShape(...))`
-// and `.border(...)` AFTER `glassmorphicBackground`; the modifier itself
-// only sets up the blur layer and the scrim. minSdk is 31 (Android 12+)
-// — see ADR 0010.
+// Remaining tokens worth keeping around for new code:
+//   GlassShape — RoundedCornerShape(28.dp), the canonical pill corner
+//                radius. Used directly by callers that want to keep a
+//                pill silhouette without the fill color.
 // ===================================================================
-
-/** A blurred translucent overlay for glass-style bars and pills. */
-fun Modifier.glassmorphicBackground(
-    alpha: Float = 0.3f
-): Modifier = this
-    .graphicsLayer {
-        compositingStrategy = CompositingStrategy.Offscreen
-        renderEffect = RenderEffect
-            .createBlurEffect(8f, 8f, Shader.TileMode.CLAMP)
-            .asComposeRenderEffect()
-    }
-    .background(Color.White.copy(alpha = alpha))
 
 val GlassShape = RoundedCornerShape(28.dp)
 

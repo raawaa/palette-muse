@@ -1,6 +1,6 @@
 # ADR 0010: `glassmorphicBackground` uses `RenderEffect.createBlurEffect`; minSdk bumped to 31
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0011
 - **Date:** 2026-06-30
 - **Supersedes:** —
 - **Related:** ADR-0008 (GlassmorphicBackgroundTest skip on real device CI)

@@ -75,7 +75,7 @@ import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.RoseGoldDark
 import com.palettemuse.theme.SurfaceLow
 import com.palettemuse.theme.SurfaceWhite
-import com.palettemuse.theme.glassmorphicBackground
+
 
 // Aura Aesthetic color tokens are imported from theme/Color.kt — do not redefine here.
 
@@ -207,8 +207,8 @@ private fun ExportContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .glassmorphicBackground()
-                .statusBarsPadding()
+              .background(Color.White)
+              .statusBarsPadding()
                 .padding(horizontal = Dimens.containerMargin, vertical = Dimens.stackMd),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -605,7 +605,7 @@ private fun BottomActionPanel(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .glassmorphicBackground()
+            .background(Color.White)
             .padding(horizontal = Dimens.containerMargin)
             .padding(top = Dimens.stackMd, bottom = 32.dp)
             .navigationBarsPadding(),

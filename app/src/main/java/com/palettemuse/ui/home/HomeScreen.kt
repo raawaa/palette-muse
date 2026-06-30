@@ -62,7 +62,7 @@ import com.palettemuse.theme.SurfaceLow
 import com.palettemuse.theme.SurfaceTint
 import com.palettemuse.theme.SurfaceWhite
 import com.palettemuse.theme.TertiaryFixedDim
-import com.palettemuse.theme.glassmorphicBackground
+
 
 // Aura Aesthetic color tokens now live in theme/Color.kt (shared across screens).
 
@@ -184,8 +184,8 @@ fun HomeScreen(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .glassmorphicBackground()
-                .statusBarsPadding()
+                  .background(Color.White)
+                  .statusBarsPadding()
                 .padding(horizontal = Dimens.containerMargin, vertical = Dimens.stackMd),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -310,8 +310,8 @@ private fun ThemeCard(
                 modifier = Modifier
                     .size(48.dp) // M3 minimum 48dp touch target
                     .clip(CircleShape)
-                    .glassmorphicBackground(alpha = 0.3f)
-                    .border(0.5.dp, Color.White.copy(alpha = 0.4f), CircleShape)
+                      .background(Color.White, CircleShape)
+                      .border(0.5.dp, Color.White.copy(alpha = 0.4f), CircleShape)
                     .clickable(onClick = onClick),
                 contentAlignment = Alignment.Center
             ) {
@@ -396,12 +396,12 @@ private fun BottomNav(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-                .glassmorphicBackground(alpha = 0.3f)
-                .border(
-                    width = 0.5.dp,
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-                )
+                  .background(Color.White)
+                  .border(
+                      width = 0.5.dp,
+                      color = Color.White.copy(alpha = 0.2f),
+                      shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                  )
                 .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceAround,

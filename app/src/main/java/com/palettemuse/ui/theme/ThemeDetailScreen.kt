@@ -68,7 +68,7 @@ import com.palettemuse.theme.PlusJakartaSans
 import com.palettemuse.theme.PrimaryDesign
 import com.palettemuse.theme.RoseGold
 import com.palettemuse.theme.SurfaceWhite
-import com.palettemuse.theme.glassmorphicBackground
+
 
 // Aura Aesthetic color tokens are imported from theme/Color.kt — do not redefine here.
 
@@ -264,15 +264,15 @@ private fun ThemeDetailContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .glassmorphicBackground()
-                .statusBarsPadding()
-                .padding(horizontal = Dimens.containerMargin, vertical = Dimens.stackMd),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = onBack,
-                modifier = Modifier.size(40.dp)
+                  .background(Color.White)
+                  .statusBarsPadding()
+                  .padding(horizontal = Dimens.containerMargin, vertical = Dimens.stackMd),
+              horizontalArrangement = Arrangement.SpaceBetween,
+              verticalAlignment = Alignment.CenterVertically
+          ) {
+              IconButton(
+                  onClick = onBack,
+                  modifier = Modifier.size(40.dp)
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowBack,
@@ -393,13 +393,12 @@ private fun HeroOrigin(photo: PhotoEntity) {
             )
         }
 
-        // Top-left glass pill — 主题起点 (star icon + label)
+        // Top-left "主题起点" pill (star icon + label)
         Row(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(16.dp)
-                .glassmorphicBackground(alpha = 0.3f)
-                .clip(RoundedCornerShape(Dimens.pillShape))
+                .background(Color.White, RoundedCornerShape(Dimens.pillShape))
                 .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(Dimens.pillShape))
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -470,7 +469,7 @@ private fun ExportPill(
                 spotColor = RoseGold.copy(alpha = 0.15f)
             )
             .clip(RoundedCornerShape(Dimens.pillShape))
-            .glassmorphicBackground(alpha = 0.3f)
+            .background(Color.White, RoundedCornerShape(Dimens.pillShape))
             .border(0.5.dp, Color.White.copy(alpha = 0.4f), RoundedCornerShape(Dimens.pillShape))
             .clickable(onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 16.dp),
