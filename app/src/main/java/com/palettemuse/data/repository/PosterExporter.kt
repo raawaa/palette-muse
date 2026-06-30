@@ -17,10 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Owns poster output: turning a rendered Bitmap into a durable or shareable Uri.
- * Sits behind its own seam so [com.palettemuse.core.PosterRenderer] stays pure
- * (Canvas only, no Context) and the PNG encode + disk write live in one place
- * instead of being smeared across PosterRenderer and ExportViewModel.
+ * Owns poster output: turns a rendered Bitmap into a durable or shareable Uri.
+ * Aggregates PNG encode + disk/Uri 写入 (Q+ MediaStore; Android-9 FileProvider 回退).
  *
  * Both methods are suspending and offload the heavy PNG encode to [Dispatchers.IO];
  * save used to run the encode on the Main dispatcher (fixed here).
