@@ -7,7 +7,7 @@ Jetpack Compose + Material 3, Hilt, Room, CameraX, Navigation 3.
 
 ### Issue tracker
 
-Issues live as markdown files under `.scratch/<feature>/` (local-markdown tracker; no git remote). External PRs are not a triage surface — there are no PRs. See `docs/agents/issue-tracker.md`.
+Issues live in GitHub Issues for `raawaa/palette-muse` (uses the `gh` CLI). External PRs are not a triage surface — issues only. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

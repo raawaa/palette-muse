@@ -92,9 +92,8 @@ The ubiquitous language that names these concepts lives in
 
 ## Contributing
 
-Contributions are welcome. Please open an issue first to discuss what you'd like
-to change. Note that this repo uses a local-markdown issue tracker under
-`.scratch/`, not GitHub Issues — see [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md).
+Contributions are welcome. Please open an issue first to discuss what you'd
+like to change. Issues live on [GitHub Issues](https://github.com/raawaa/palette-muse/issues) — see [`docs/agents/issue-tracker.md`](docs/agents/issue-tracker.md) for conventions.
 
 ## License
 

@@ -8,14 +8,47 @@ that domain.
 
 **Theme (主题)**:
 A curated color collection: one representative color plus the photos captured
-against it. The unit the app curates and the user browses.
+against it. The unit the app curates and the user browses. A theme carries a
+human-readable name — initially a poetic color name drawn from its
+representative color (e.g. "Dusty Red"), freely renameable by the user.
 _Avoid_: palette (brand-only — the UI says 主题, not palette).
 
-**Representative color**:
-The single color that stands for a theme — the dominant color of its seed
-photo. The color a new capture is matched against, and the one that leads its
-swatches.
+**Representative color (代表色)**:
+The single color that stands for a theme — the color it is known and matched
+by. Its initial value is the whole-photo dominant color of the seed photo
+captured when the theme is created; the user may later overwrite it from the
+theme detail screen. It is the baseline a new capture is matched against, and
+it leads its swatches. The match score shown live in the viewfinder measures
+against this same color — never a viewfinder-only approximation.
 _Avoid_: signature color, main color.
+
+**Capture (捕捉)**:
+A photo capture together with its attribution. On shutter press the app extracts
+the whole-photo dominant color (the photo's captured color) and scores it
+against every theme's representative color. The score is advisory only —
+attribution is confirmed by the user: accept the match (the photo joins that
+theme), or spin up a new theme; when no theme clears the threshold a new theme
+is unavoidable. A capture the user discards before confirmation does not take
+effect and leaves nothing behind.
+_Avoid_: 拍照, shot (a capture carries color extraction and attribution; a
+plain photo does not).
+
+**Captured color (捕获色)**:
+The whole-photo dominant color of a single photo — the color measured at the
+moment of capture and stored as that photo's attribute. It is what "a captured
+color" in match score refers to. When a photo joins an existing theme, its
+captured color is recorded as the photo's own and never overwrites that theme's
+representative color.
+_Avoid_: 样本色, sample color.
+
+**Seed photo (种子照片)**:
+The photo produced by the capture that creates a theme — the theme's first
+photo. Its captured color becomes the initial value of that theme's
+representative color. Each theme has exactly one seed photo. If the user later
+overwrites the representative color, the seed photo's identity is unchanged (it
+records where the theme began), though its color may then differ from the
+representative color.
+_Avoid_: 封面照, 首图, primary photo.
 
 **Match score**:
 A 0–100 measure of how close a captured color is to a theme's representative
@@ -30,6 +63,15 @@ _Avoid_: cutoff.
 The colors that represent a theme at a glance: its representative color plus up
 to two standout colors actually captured into it. Describes what is in the theme.
 _Avoid_: palette, color set.
+
+**Poster (海报)**:
+A theme's exportable composite image. It takes a selection of that theme's
+photos, laid out by a chosen template together with the theme name and the
+shade ramp derived from its representative color, into a single image that can
+be saved or shared. This is the app's output stage: capture gathers, theme
+curates, poster exports. A poster is not persisted — it is composed on demand
+from the theme's current state.
+_Avoid_: moodboard, 图片, image.
 
 **Shade ramp (渐暗色阶)**:
 A graduated set of darker shades of a single color, used to style a poster's
