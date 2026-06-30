@@ -1,8 +1,8 @@
 # ADR 0002: buildSwatches is a top-level function, not a value type or domain layer
 
-- **Status:** Accepted
-- **Date:** 2026-06-29
-- **Related:** Issue #5 (extraction), Issue #4 (standout semantic gap)
+- **Status:** Superseded by [ADR-0004](0004-swatches-removed-representative-color-is-single-identity.md)
+- **Date:** 2026-06-29 (original), 2026-06-30 (superseded)
+- **Related:** Issue #5 (extraction), Issue #4 (standout semantic gap) — both resolved by removing the concept, see ADR-0004.
 
 ## Context
 

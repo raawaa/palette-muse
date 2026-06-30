@@ -64,15 +64,4 @@ class ThemeRepositoryTest {
         repo.savePhotoToTheme(id, "/cap2.jpg", "#D5A09A")
         assertEquals(3, db.photoDao().getPhotosForThemeOnce(id).size)
     }
-
-    @Test
-    fun getAllThemesWithPhotos_buildsPalette() = runTest {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        repo.savePhotoToTheme(id, "/cap.jpg", "#C99A92")
-        val list = repo.getAllThemesWithPhotos().first()
-        assertEquals(1, list.size)
-        val swatches = list[0].swatches
-        assertEquals("#DCA8A6", swatches.first()) // 代表色居首
-        assertTrue(swatches.size in 1..3)
-    }
 }

@@ -190,7 +190,6 @@ private fun ExportContent(
             PosterPreviewCard(
                 theme = data.theme,
                 photos = data.photos,
-                swatches = data.swatches,
                 template = selectedTemplate,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -247,7 +246,6 @@ private fun ExportContent(
 private fun PosterPreviewCard(
     theme: ThemeEntity,
     photos: List<PhotoEntity>,
-    swatches: List<String>,
     template: PosterRenderer.TemplateType,
     modifier: Modifier = Modifier
 ) {
@@ -269,19 +267,18 @@ private fun PosterPreviewCard(
         // Photo layer — fills the full card
         when (template) {
             PosterRenderer.TemplateType.GRID ->
-                PosterPreviewGrid(photos = photos, theme = theme, swatches = swatches, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
+                PosterPreviewGrid(photos = photos, theme = theme, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.FILM ->
-                PosterPreviewFilm(photos = photos, theme = theme, swatches = swatches, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
+                PosterPreviewFilm(photos = photos, theme = theme, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.JOURNAL ->
-                PosterPreviewJournal(photos = photos, theme = theme, swatches = swatches, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
+                PosterPreviewJournal(photos = photos, theme = theme, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
             PosterRenderer.TemplateType.MINIMAL ->
-                PosterPreviewMinimal(photos = photos, theme = theme, swatches = swatches, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
+                PosterPreviewMinimal(photos = photos, theme = theme, modifier = Modifier.fillMaxSize(), cardW = cardW, cardH = cardH)
         }
 
         // Footer overlay — drawn on top of photos (matching Canvas drawTitleAndStrip)
         PosterFooter(
             theme = theme,
-            swatches = swatches,
             template = template,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
@@ -296,7 +293,6 @@ private fun PosterPreviewCard(
 private fun PosterPreviewGrid(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
-    swatches: List<String>,
     modifier: Modifier = Modifier,
     cardW: Dp = 0.dp,
     cardH: Dp = 0.dp
@@ -319,7 +315,6 @@ private fun PosterPreviewGrid(
 private fun PosterPreviewFilm(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
-    swatches: List<String>,
     modifier: Modifier = Modifier,
     cardW: Dp,
     cardH: Dp
@@ -365,7 +360,6 @@ private fun PosterPreviewFilm(
 private fun PosterPreviewJournal(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
-    swatches: List<String>,
     modifier: Modifier = Modifier,
     cardW: Dp,
     cardH: Dp
@@ -402,7 +396,6 @@ private fun PosterPreviewJournal(
 private fun PosterPreviewMinimal(
     photos: List<PhotoEntity>,
     theme: ThemeEntity,
-    swatches: List<String>,
     modifier: Modifier = Modifier,
     cardW: Dp,
     cardH: Dp
@@ -491,13 +484,12 @@ private fun BentoCollage(
 }
 
 // ===================================================================
-// Poster Footer — theme name + series label + swatches swatch tag
+// Poster Footer — theme name + representative color chip
 // ===================================================================
 
 @Composable
 private fun PosterFooter(
     theme: ThemeEntity,
-    swatches: List<String>,
     template: PosterRenderer.TemplateType,
     modifier: Modifier = Modifier
 ) {
@@ -523,52 +515,21 @@ private fun PosterFooter(
             color = titleColor
         )
         Spacer(Modifier.height(8.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            swatches.take(3).forEach { hex ->
-                Box(
-                    modifier = Modifier
-                        .size(paletteSize)
-                        .background(
-                            color = parseHex(hex),
-                            shape = if (template == PosterRenderer.TemplateType.JOURNAL)
-                                RoundedCornerShape(8.dp) else CircleShape
-                        )
-                        .border(
-                            width = if (template == PosterRenderer.TemplateType.FILM) 1.dp else 0.dp,
-                            color = Color.Black,
-                            shape = if (template == PosterRenderer.TemplateType.JOURNAL)
-                                RoundedCornerShape(8.dp) else CircleShape
-                        )
+        Box(
+            modifier = Modifier
+                .size(paletteSize)
+                .background(
+                    color = parseHex(theme.representativeHex),
+                    shape = if (template == PosterRenderer.TemplateType.JOURNAL)
+                        RoundedCornerShape(8.dp) else CircleShape
                 )
-                Spacer(Modifier.width(8.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun SwatchTag(swatches: List<String>) {
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(Dimens.fullRound))
-            .background(SurfaceLow)
-            .border(0.5.dp, OutlineVariant, RoundedCornerShape(Dimens.fullRound))
-            .padding(6.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        swatches.forEach { hex ->
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .clip(CircleShape)
-                    .background(parseHex(hex))
-            )
-        }
+                .border(
+                    width = if (template == PosterRenderer.TemplateType.FILM) 1.dp else 0.dp,
+                    color = Color.Black,
+                    shape = if (template == PosterRenderer.TemplateType.JOURNAL)
+                        RoundedCornerShape(8.dp) else CircleShape
+                )
+        )
     }
 }
 

@@ -159,7 +159,7 @@ fun ThemeDetailScreen(
 }
 
 // ===================================================================
-// Content — TopAppBar + scrollable swatches header + Hero + masonry
+// Content — TopAppBar + scrollable representative color header + Hero + masonry
 // ===================================================================
 
 @Composable
@@ -174,7 +174,6 @@ private fun ThemeDetailContent(
 ) {
     val theme = state.theme
     val photos = state.photos
-    val swatches = state.swatches
 
     // Hero = seed photo (or first photo as fallback).
     val heroPhoto = photos.firstOrNull { it.isSeed } ?: photos.firstOrNull()
@@ -204,7 +203,7 @@ private fun ThemeDetailContent(
             verticalItemSpacing = Dimens.gutter,
             horizontalArrangement = Arrangement.spacedBy(Dimens.gutter)
         ) {
-            // ---- Header (swatches header) — spans full width as a single item ----
+            // ---- Header (representative color dot) — spans full width as a single item ----
             item(span = fullLineSpan()) {
                 Column(
                     modifier = Modifier
@@ -212,27 +211,20 @@ private fun ThemeDetailContent(
                         .padding(top = 88.dp, bottom = Dimens.stackMd), // top clearance for TopAppBar
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Palette dots
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        swatches.forEach { hex ->
-                            Box(
-                                Modifier
-                                    .size(32.dp)
-                                    .shadow(
-                                        elevation = 4.dp,
-                                        shape = CircleShape,
-                                        ambientColor = RoseGold.copy(alpha = 0.06f),
-                                        spotColor = RoseGold.copy(alpha = 0.08f)
-                                    )
-                                    .clip(CircleShape)
-                                    .border(0.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
-                                    .background(parseHex(hex))
+                    // Representative color dot
+                    Box(
+                        Modifier
+                            .size(32.dp)
+                            .shadow(
+                                elevation = 4.dp,
+                                shape = CircleShape,
+                                ambientColor = RoseGold.copy(alpha = 0.06f),
+                                spotColor = RoseGold.copy(alpha = 0.08f)
                             )
-                        }
-                    }
+                            .clip(CircleShape)
+                            .border(0.5.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                            .background(parseHex(theme.representativeHex))
+                    )
                     Spacer(Modifier.height(Dimens.stackSm))
                     Text(
                         text = theme.name,
