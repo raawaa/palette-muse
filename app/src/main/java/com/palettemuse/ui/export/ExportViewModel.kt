@@ -132,9 +132,9 @@ class ExportViewModel @AssistedInject constructor(
         val config = PosterRenderer.PosterConfig(
             title = data.theme.name.ifBlank { "Moodboard Color Harmony" },
             subtitle = "curated with Palette Muse",
-            primaryColor = primary,
-            secondaryColor = shadeOf(primary, 0.85f),
-            accentColor = shadeOf(primary, 0.25f),
+            baseColor = primary,
+            shadeMid = shadeOf(primary, 0.85f),
+            shadeDeep = shadeOf(primary, 0.25f),
             photos = photos,
             template = template
         )

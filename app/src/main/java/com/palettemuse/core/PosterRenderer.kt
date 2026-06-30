@@ -17,9 +17,9 @@ class PosterRenderer @Inject constructor() {
     data class PosterConfig(
         val title: String = "Moodboard Color Harmony",
         val subtitle: String = "curated with Palette Muse",
-        val primaryColor: Int = Color.GRAY,
-        val secondaryColor: Int = Color.LTGRAY,
-        val accentColor: Int = Color.DKGRAY,
+        val baseColor: Int = Color.GRAY,
+        val shadeMid: Int = Color.LTGRAY,
+        val shadeDeep: Int = Color.DKGRAY,
         val photos: List<Bitmap> = emptyList(),
         val template: TemplateType = TemplateType.GRID
     )
@@ -128,7 +128,7 @@ class PosterRenderer @Inject constructor() {
         }
         canvas.drawText(config.title, 40f, h * 0.95f, textPaint)
         // draw shadeRamp
-        val shadeRamp = listOf(config.primaryColor, config.secondaryColor, config.accentColor)
+        val shadeRamp = listOf(config.baseColor, config.shadeMid, config.shadeDeep)
         val swatchY = h * 0.88f
         val swatchPaint = Paint().apply { style = Paint.Style.FILL; isAntiAlias = true }
         val borderPaint = if (template == TemplateType.FILM) {
