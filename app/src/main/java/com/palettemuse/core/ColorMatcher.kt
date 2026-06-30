@@ -1,6 +1,5 @@
 package com.palettemuse.core
 
-import android.graphics.Color
 import kotlin.math.sqrt
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -8,12 +7,15 @@ import javax.inject.Singleton
 @Singleton
 class ColorMatcher @Inject constructor() {
 
+    private data class Rgb(val r: Int, val g: Int, val b: Int)
+
     /**
-     * 计算 CIELAB 色差 ΔE 并转为匹配百分比
+     * Computes the CIELAB ΔE between [targetHex] and [sampleHex] and returns a
+     * 0–100 match percentage. Pure — no Android framework calls; see ADR 0006.
      */
     fun matchPercentage(targetHex: String, sampleHex: String): Int {
-        val targetRgb = Color.parseColor(targetHex)
-        val sampleRgb = Color.parseColor(sampleHex)
+        val targetRgb = parseHexRgb(targetHex)
+        val sampleRgb = parseHexRgb(sampleHex)
 
         val targetLab = rgbToLab(targetRgb)
         val sampleLab = rgbToLab(sampleRgb)
@@ -27,10 +29,17 @@ class ColorMatcher @Inject constructor() {
         return (100.0 - deltaE * 2.5).toInt().coerceIn(0, 100)
     }
 
-    private fun rgbToLab(rgb: Int): DoubleArray {
-        val r = srgbLinearize(Color.red(rgb) / 255.0)
-        val g = srgbLinearize(Color.green(rgb) / 255.0)
-        val b = srgbLinearize(Color.blue(rgb) / 255.0)
+    private fun parseHexRgb(hex: String): Rgb {
+        val s = if (hex.startsWith("#")) hex.drop(1) else hex
+        require(s.length == 6) { "Hex must be #RRGGBB, was: $hex" }
+        val v = s.toInt(16)
+        return Rgb((v shr 16) and 0xFF, (v shr 8) and 0xFF, v and 0xFF)
+    }
+
+    private fun rgbToLab(rgb: Rgb): DoubleArray {
+        val r = srgbLinearize(rgb.r / 255.0)
+        val g = srgbLinearize(rgb.g / 255.0)
+        val b = srgbLinearize(rgb.b / 255.0)
 
         // D65 参考白点
         val x = 0.4124564 * r + 0.3575761 * g + 0.1804375 * b
