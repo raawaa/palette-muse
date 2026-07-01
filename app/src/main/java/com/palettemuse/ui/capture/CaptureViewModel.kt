@@ -47,6 +47,13 @@ class CaptureViewModel @Inject constructor(
 
     private val _themes = MutableStateFlow<List<ThemeEntity>>(emptyList())
 
+    /**
+     * Display-layer smoother for the TARGET pill (see class KDoc and issue #16).
+     * Constructed inside the ViewModel so the public constructor signature stays
+     * stable for the existing instrumented test suite.
+     */
+    private val viewfinderSmoother = ViewfinderSmoother()
+
     init {
         viewModelScope.launch {
             themeRepository.getAllThemes().collect { _themes.value = it }
@@ -57,11 +64,9 @@ class CaptureViewModel @Inject constructor(
         if (_themes.value.isEmpty()) return // 等待 themes 缓存就绪 (首帧 themes 可能未加载)
         val sampleHex = colorAnalyzer.extractDominantHex(bitmap)
         val best = themeMatcher.bestMatch(_themes.value, sampleHex)
-        val target = if (best != null) {
-            TargetState(best.theme.name, best.score, isFallback = false)
-        } else {
-            TargetState("", 0, isFallback = true)
-        }
+        // Display-layer smoothing only: capturePhoto() below still uses the
+        // raw score for the real shutter decision.
+        val target = viewfinderSmoother.smooth(best)
         _uiState.value = _uiState.value.copy(
             targetTheme = target,
             matchPercentage = target.matchPct
@@ -108,6 +113,9 @@ class CaptureViewModel @Inject constructor(
             lensFacing = if (_uiState.value.lensFacing == CameraSelector.LENS_FACING_BACK)
                 CameraSelector.LENS_FACING_FRONT else CameraSelector.LENS_FACING_BACK
         )
+        // Flipping lenses is a genuine scene change; drop the smoother's
+        // history so the new viewfinder does not show a stale theme.
+        viewfinderSmoother.reset()
     }
 
     fun dismissPending() {
