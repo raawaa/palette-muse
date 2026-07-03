@@ -7,14 +7,18 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.view.PreviewView
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashOn
@@ -61,16 +65,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.palettemuse.camera.CameraManager
@@ -90,6 +101,7 @@ fun CaptureScreen(
     // One-shot flag for capture failure feedback (consumed by the Snackbar LaunchedEffect below).
     val captureError = remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
+    var shutterTick by remember { mutableStateOf(0) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -233,39 +245,20 @@ fun CaptureScreen(
                     onClick = { viewModel.flipCamera() }
                 )
 
-                // Main shutter button
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .padding(8.dp)
-                        .clickable {
-                            cameraManager.takePhoto(
-                                context,
-                                onPhotoTaken = { bmp -> viewModel.capturePhoto(bmp) },
-                                onError = {
-                                    // Surface capture failure to the user via Snackbar.
-                                    captureError.value = true
-                                }
-                            )
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        Color(0xFFA6606B),
-                                        Color(0xFFFFB2BC)
-                                    )
-                                )
-                            )
-                    )
-                }
+                // Main shutter button — haptic + scale + flash overlay are wired
+                // inside ShutterButton / ShutterFlashOverlay (issue #31 / ADR-0018).
+                ShutterButton(
+                    onShutter = {
+                        cameraManager.takePhoto(
+                            onPhotoTaken = { bmp -> viewModel.capturePhoto(bmp) },
+                            onError = {
+                                // Surface capture failure to the user via Snackbar.
+                                captureError.value = true
+                            }
+                        )
+                        shutterTick++
+                    }
+                )
 
                 GlassCircleButton(
                     icon = { Icon(Icons.Default.Tune, contentDescription = "Tune", tint = Color(0xFF1C1B1B)) },
@@ -293,6 +286,12 @@ fun CaptureScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 110.dp) // clear the shutter controls
         )
+
+        // === Layer 9: Full-screen shutter flash overlay (issue #31 / ADR-0018) ===
+        // Sits last in the outer Box so its zIndex(10f) wins over every other
+        // layer. Driven by [shutterTick]; each press increments and re-fires
+        // the alpha ramp (0 → 0.8 in 20ms, 0.8 → 0 in 100ms).
+        ShutterFlashOverlay(triggerKey = shutterTick)
     }
 }
 
@@ -312,6 +311,131 @@ private fun GlassCircleButton(
     ) {
         icon()
     }
+}
+
+/**
+ * Test seam: the current press-driven scale factor of [ShutterButton], read via
+ * semantics from instrumented tests in [ShutterFeedbackTest]. Values: `1f`
+ * resting, animates toward `0.9f` while the shutter is pressed.
+ */
+internal val ShutterScaleSemanticsKey = SemanticsPropertyKey<Float>("ShutterScale")
+
+/**
+ * Test seam: the current alpha of the [ShutterFlashOverlay] white flash,
+ * read via semantics from instrumented tests in [ShutterFeedbackTest].
+ * Ranges 0f–0.8f across the 0ms→120ms shutter feedback envelope.
+ */
+internal val ShutterFlashAlphaSemanticsKey = SemanticsPropertyKey<Float>("ShutterFlashAlpha")
+
+/**
+ * Shutter button — extracted from [CaptureScreen] for testability.
+ *
+ * Issues the three simultaneous UX feedback signals on press (issue #31 /
+ * ADR-0018):
+ * 1. Scale-down (1f → 0.9f) via [animateFloatAsState] over `tween(80)`,
+ *    auto-spring-back when the press releases.
+ * 2. [HapticFeedbackType.LongPress] fired from the click callback — the same
+ *    [performHaptic] lambda runs **before** [onShutter], so the haptic
+ *    precedes `cameraManager.takePhoto(...)` regardless of camera latency.
+ * 3. (Flash overlay lives in [ShutterFlashOverlay] — sibling, driven by a
+ *    `triggerKey` counter that the caller bumps in [onShutter].)
+ *
+ * Test seams:
+ * - [performHaptic] defaults to the real `LocalHapticFeedback` but is
+ *   injectable so tests can count invocations.
+ * - [interactionSource] defaults to a fresh [MutableInteractionSource] but is
+ *   injectable so tests can `tryEmit(PressInteraction.Press(...))` directly
+ *   without driving a touch gesture.
+ * - The current scale value is published via [ShutterScaleSemanticsKey].
+ */
+@Composable
+@androidx.annotation.VisibleForTesting
+internal fun ShutterButton(
+    onShutter: () -> Unit,
+    modifier: Modifier = Modifier,
+    performHaptic: (() -> Unit)? = null,
+    interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
+) {
+    val hapticFeedback = LocalHapticFeedback.current
+    val performHapticFinal: () -> Unit = performHaptic
+        ?: { hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress) }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.9f else 1f,
+        animationSpec = tween(durationMillis = 80),
+        label = "shutter_scale",
+    )
+    Box(
+        modifier = modifier
+            .size(80.dp)
+            .scale(scale)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.2f))
+            .padding(8.dp)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    performHapticFinal()
+                    onShutter()
+                }
+            )
+            .semantics { set(ShutterScaleSemanticsKey, scale) }
+            .testTag("shutter_button"),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(CircleShape)
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xFFA6606B),
+                            Color(0xFFFFB2BC)
+                        )
+                    )
+                )
+        )
+    }
+}
+
+/**
+ * Full-screen white flash that fires on each shutter press (issue #31 /
+ * ADR-0018). Sits at `zIndex(10f)` inside [CaptureScreen]'s outer Box so it
+ * paints above every other layer.
+ *
+ * Animation envelope per press: alpha `0 → 0.8` over 20ms, then `0.8 → 0`
+ * over 100ms — total ~120ms, matching the spec's "decays to ≤ 0.05 within
+ * 120ms" budget. Triggered by [triggerKey] changing; a counter that the
+ * caller increments inside the shutter callback keeps successive presses
+ * independent.
+ *
+ * No `clickable` / `pointerInput` is attached, so the overlay does not
+ * intercept touch — taps still fall through to the layers below (notably the
+ * shutter button).
+ */
+@Composable
+fun ShutterFlashOverlay(
+    triggerKey: Int,
+    modifier: Modifier = Modifier,
+) {
+    val flashAlpha = remember { Animatable(0f) }
+    LaunchedEffect(triggerKey) {
+        if (triggerKey > 0) {
+            flashAlpha.snapTo(0f)
+            flashAlpha.animateTo(0.8f, animationSpec = tween(durationMillis = 20))
+            flashAlpha.animateTo(0f, animationSpec = tween(durationMillis = 100))
+        }
+    }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .zIndex(10f)
+            .background(Color.White.copy(alpha = flashAlpha.value))
+            .semantics { set(ShutterFlashAlphaSemanticsKey, flashAlpha.value) }
+            .testTag("shutter_flash"),
+    )
 }
 
 @Composable

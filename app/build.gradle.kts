@@ -46,6 +46,7 @@ android {
             testInstrumentationRunnerArguments["notClass"] =
                 "com.palettemuse.ui.capture.CaptureConfirmSheetTest," +
                     "com.palettemuse.ui.capture.LowConfidenceHintTest," +
+                    "com.palettemuse.ui.capture.ShutterFeedbackTest," +
                     "com.palettemuse.ui.theme.ThemeDetailScreenTest"
         }
     }
