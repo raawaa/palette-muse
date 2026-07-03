@@ -69,6 +69,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.palettemuse.camera.CameraManager
@@ -444,4 +445,43 @@ fun CaptureConfirmSheet(
             }
         }
     }
+}
+
+/**
+ * Soft, single-line nudge shown on the capture confirm sheet when the algorithm
+ * flagged the photo as low-confidence (issue #20 / ADR-0014). Stateless by
+ * design so it can be Previewed and tested in isolation from `PendingCapture`,
+ * the camera, and the analyzer pipeline.
+ *
+ * - `visible == true`  → one line of soft rose-gold text, no background,
+ *                       no icon, no bold weight.
+ * - `visible == false` → emits no text node (asserted via semantics tree in
+ *                       [com.palettemuse.ui.capture.LowConfidenceHintTest]).
+ *
+ * The text color is `Color(0xFF8A4853)`, the same tone already used by the
+ * confirm sheet's title; reusing it keeps the sheet's visual register
+ * consistent (PRD: "no background pill, no icon, no bold weight").
+ */
+@Composable
+@androidx.annotation.VisibleForTesting
+internal fun LowConfidenceHint(visible: Boolean) {
+    if (visible) {
+        Text(
+            text = "颜色不太明显，要重拍吗？",
+            color = Color(0xFF8A4853),
+            fontSize = 14.sp,
+        )
+    }
+}
+
+@Preview(name = "LowConfidenceHint — visible")
+@Composable
+private fun LowConfidenceHintVisiblePreview() {
+    LowConfidenceHint(visible = true)
+}
+
+@Preview(name = "LowConfidenceHint — hidden")
+@Composable
+private fun LowConfidenceHintHiddenPreview() {
+    LowConfidenceHint(visible = false)
 }
