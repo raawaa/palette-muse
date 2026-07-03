@@ -21,7 +21,7 @@ import com.palettemuse.data.repository.ThemeMatcher
  *     failure mode and the "fallback flickers with a marginal match" mode.
  *
  * This sits at the **display layer** by design. The extraction module
- * ([com.palettemuse.core.ColorAnalyzer.extractDominantHex]) stays single-sample
+ * ([com.palettemuse.core.ColorAnalyzer.extractCapturedColor]) stays single-sample
  * so that the shutter path (`CaptureViewModel.capturePhoto`) keeps reporting
  * the real score. See ADR-0001 ("Follow-up: temporal smoothing at the viewfinder
  * display layer") and issue #16.

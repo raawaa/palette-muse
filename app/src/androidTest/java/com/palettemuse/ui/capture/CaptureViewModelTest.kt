@@ -6,6 +6,7 @@ import android.graphics.Color
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.palettemuse.core.CaptureConfidencePolicy
 import com.palettemuse.core.ColorAnalyzer
 import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
@@ -24,6 +25,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -59,7 +61,7 @@ class CaptureViewModelTest {
 
     @Test
     fun confirmCapture_createsThemeWhenNoMatch() = runTest(dispatcher) {
-        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
+        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy())
         vm.setPending(PendingCapture("/cap.jpg", "#DCA8A6", matchedTheme = null))
         vm.confirmCapture()
         advanceUntilIdle()
@@ -71,7 +73,7 @@ class CaptureViewModelTest {
     fun confirmCapture_joinsThemeWhenMatched() = runTest(dispatcher) {
         val seedId = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         val matched = repo.findMatchingTheme("#DCB0A8")!!
-        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
+        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy())
         vm.setPending(PendingCapture("/cap.jpg", "#DCB0A8", matched))
         vm.confirmCapture()
         advanceUntilIdle()
@@ -83,7 +85,7 @@ class CaptureViewModelTest {
     fun saveAsNewTheme_createsSeparateThemeEvenWhenMatched() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
         val matched = repo.findMatchingTheme("#DCB0A8")!!
-        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
+        val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy())
         vm.setPending(PendingCapture("/cap.jpg", "#DCB0A8", matched))
         vm.saveAsNewTheme()
         advanceUntilIdle()
@@ -94,7 +96,7 @@ class CaptureViewModelTest {
     @Test
     fun onFrameAnalyzed_picksClosestTheme() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy())
         advanceUntilIdle()  // drain init's themes collector before analyzing a frame
         // Same extractor as the shutter path: Palette quantizes a solid #DCA8A6 to
         // ~#D8A8A0, still close enough to the seed theme to clear MATCH_THRESHOLD.
@@ -110,7 +112,7 @@ class CaptureViewModelTest {
     @Test
     fun onFrameAnalyzed_fallbackIsHonestWhenNoMatch() = runTest(dispatcher) {
         repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy())
         advanceUntilIdle()  // drain init's themes collector before analyzing a frame
         vm.onFrameAnalyzed(solidBitmap("#00FF00"))  // 亮绿 vs Dusty Rose → 大 ΔE → fallback
         advanceUntilIdle()
@@ -121,12 +123,53 @@ class CaptureViewModelTest {
 
     @Test
     fun onFrameAnalyzed_skipsWhenNoThemes() = runTest(dispatcher) {
-        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()))
+        val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy())
         advanceUntilIdle() // init collect completes (empty _themes)
         val before = vm.uiState.value.targetTheme
         vm.onFrameAnalyzed(solidBitmap("#DCA8A6"))
         advanceUntilIdle()
         assertEquals(before, vm.uiState.value.targetTheme) // unchanged (skipped)
+    }
+
+    /**
+     * Per ADR-0014 / issue #17: [PendingCapture] carries an [isLowConfidence]
+     * field that the confirm sheet reads to surface the "color unclear" prompt
+     * (UI out of scope). The two upstream modules are unit-tested in pure JVM:
+     * [com.palettemuse.core.CaptureConfidencePolicyTest] pins the thresholds, and
+     * [com.palettemuse.core.ColorAnalyzerTest.populatesBothSignals] pins that
+     * heterogeneous bitmaps populate both signals. This test pins the data-class
+     * wiring: a policy output survives the round-trip through [setPending].
+     *
+     * We deliberately don't exercise the full `capturePhoto()` IO path here:
+     * `viewModelScope` is on the test dispatcher but `capturePhoto` does
+     * `withContext(Dispatchers.Default)` for `bitmapStorage.saveCapture`, which
+     * escapes the virtual clock under the instrumented runner. The wiring
+     * tested here is exactly what capturePhoto would write anyway.
+     */
+    @Test
+    fun setPending_lowConfidenceFlag_roundTripsThroughUiState() {
+        val policy = CaptureConfidencePolicy()
+        val captured = com.palettemuse.core.CapturedColor(
+            hex = "#3C8C5A",
+            populationShare = 0.30,
+            topVsSecondRatio = 1.10,
+        )
+        assertTrue("sanity: heterogeneous bitmap must be low-confidence", policy.isLowConfidence(captured))
+
+        val vm = CaptureViewModel(
+            repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), policy
+        )
+        vm.setPending(
+            PendingCapture(
+                imagePath = "/cap.jpg",
+                dominantHex = captured.hex,
+                matchedTheme = null,
+                isLowConfidence = policy.isLowConfidence(captured),
+            )
+        )
+        val pending = vm.uiState.value.pendingCapture
+        assertNotNull(pending)
+        assertTrue("setPending preserves the policy output", pending!!.isLowConfidence)
     }
 
     private fun solidBitmap(hex: String): Bitmap =
