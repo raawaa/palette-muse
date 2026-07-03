@@ -426,7 +426,7 @@ fun CaptureConfirmSheet(
                 val retakeBorder = if (pending.isLowConfidence) {
                     BorderStroke(1.5.dp, Color(0xFF8A4853))
                 } else {
-                    BorderStroke(0.5.dp, Color(0xFF8A4853))
+                    null
                 }
                 OutlinedButton(
                     onClick = onDismiss,
@@ -442,9 +442,10 @@ fun CaptureConfirmSheet(
                     Text("重拍", color = Color(0xFF8A4853))
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            LowConfidenceHint(visible = pending.isLowConfidence)
-            Spacer(Modifier.height(12.dp))
+            if (pending.isLowConfidence) {
+                LowConfidenceHint(visible = true)
+                Spacer(Modifier.height(12.dp))
+            }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     onClick = onConfirm,
