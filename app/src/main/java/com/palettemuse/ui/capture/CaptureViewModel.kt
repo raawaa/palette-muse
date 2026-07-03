@@ -10,6 +10,7 @@ import com.palettemuse.data.model.ThemeEntity
 import com.palettemuse.data.repository.BitmapStorage
 import com.palettemuse.data.repository.ThemeRepository
 import com.palettemuse.data.repository.ThemeMatcher
+import com.palettemuse.debug.DebugFrameDumper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -50,6 +51,7 @@ class CaptureViewModel @Inject constructor(
     private val bitmapStorage: BitmapStorage,
     private val themeMatcher: ThemeMatcher,
     private val captureConfidencePolicy: CaptureConfidencePolicy,
+    private val debugFrameDumper: DebugFrameDumper,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CaptureUiState())
@@ -93,6 +95,11 @@ class CaptureViewModel @Inject constructor(
             val dominantHex = captured.hex
             val matched = themeRepository.findMatchingTheme(dominantHex)
             val isLowConfidence = captureConfidencePolicy.isLowConfidence(captured)
+            // Debug-only: dump the bitmap ColorAnalyzer actually saw, alongside
+            // the analyzer's verdict. Self-gated inside the dumper (no-op in
+            // release builds via ApplicationInfo.FLAG_DEBUGGABLE). See
+            // `docs/adr/0015-capture-debug-frame-dumper.md` and the dumper KDoc.
+            debugFrameDumper.dump(bitmap, captured, "shutter")
             _uiState.value = _uiState.value.copy(
                 isAnalyzing = false,
                 pendingCapture = PendingCapture(imagePath, dominantHex, matched, isLowConfidence)
