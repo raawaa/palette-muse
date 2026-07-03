@@ -22,8 +22,12 @@ class ColorAnalyzerTest {
         // signal — "this beats nothing by infinity") so the policy's
         // `ratio < 1.5` short-circuits to false and the solid capture is
         // correctly NOT flagged low-confidence.
+        //
+        // Pre-ADR-0017 (Palette era) the hex snapped to the median-cut grid
+        // (#D8A8A0). k-means returns the exact center of identical pixels —
+        // the input color itself.
         val c = analyzer.extractCapturedColor(solidBitmap("#DCA8A6"))
-        assertEquals("#D8A8A0", c.hex) // Palette-quantized dominant
+        assertEquals("#DCA8A6", c.hex) // k-means center of identical pixels
         assertTrue("share must be high for a solid bitmap", c.populationShare > 0.95)
         assertTrue("ratio must be +Inf for a single-swatch palette", c.topVsSecondRatio == Double.POSITIVE_INFINITY)
         // Pin the policy wire-through: solid bitmaps must not be low-confidence.

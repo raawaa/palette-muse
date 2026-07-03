@@ -2,14 +2,17 @@
 
 - **Status:** Reserved
 - **Date:** —
-- **Related:** Issue #17, ADR-0014, ADR-0015
+- **Related:** Issue #17, ADR-0014, ADR-0015, ADR-0017
 
 ## Context
 
-ADR-0015 builds the data-collection bridge (the `DebugFrameDumper`). This ADR
-consumes that data to calibrate the `CaptureConfidencePolicy` thresholds from their
-current seed values `(MIN_POPULATION_SHARE = 0.40, MIN_TOP_VS_SECOND_RATIO = 1.5)` to
-values grounded in real production input.
+ADR-0015 builds the data-collection bridge (the `DebugFrameDumper`) and ADR-0017
+replaced `androidx.palette` with k-means after the corpus proved Palette's
+median-cut biased warm-scene shares. This ADR consumes a **fresh** corpus
+(captured under the k-means quantizer) to calibrate the `CaptureConfidencePolicy`
+thresholds from their current seed values
+`(MIN_POPULATION_SHARE = 0.40, MIN_TOP_VS_SECOND_RATIO = 1.5)` to values grounded
+in real production input.
 
 ## Decision
 
@@ -17,9 +20,10 @@ values grounded in real production input.
 
 When the debug-frame corpus is available, this ADR will:
 
-1. Re-run the `ColorAnalyzer` quantization (k=12, 96×96) on each dumped PNG via the
-   offline analysis script and compare the re-derived `populationShare` /
-   `topVsSecondRatio` against the sidecar JSON to verify round-trip fidelity.
+1. Re-run the `ColorAnalyzer` k-means quantization (k=12, 96×96 — see ADR-0017)
+   on each dumped PNG via the offline analysis script and compare the re-derived
+   `populationShare` / `topVsSecondRatio` against the sidecar JSON to verify
+   round-trip fidelity.
 2. Tag each frame with a human judgement ("clear dominant" / "unclear dominant").
 3. Fit the threshold boundary to maximise agreement between `isLowConfidence` and
    the human tags.

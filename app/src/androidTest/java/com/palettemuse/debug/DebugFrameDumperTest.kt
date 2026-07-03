@@ -50,13 +50,18 @@ class DebugFrameDumperTest {
             topVsSecondRatio = 1.21,
         )
 
-        dumper.dump(bmp, captured, "shutter")
-
+        // Isolation: real device captures and prior test runs leave frames here
+        // (the dir is never auto-cleared). Wipe it so the count assertions below
+        // reflect only this test's dump.
         val dir = File(
             ApplicationProvider.getApplicationContext<android.app.Application>()
                 .getExternalFilesDir(null),
             "debug-frames",
         )
+        dir.listFiles()?.forEach { it.delete() }
+
+        dumper.dump(bmp, captured, "shutter")
+
         assertTrue("dump dir should exist, was: ${dir.absolutePath}", dir.exists())
 
         val pngs = dir.listFiles { f -> f.name.endsWith("-shutter.png") }

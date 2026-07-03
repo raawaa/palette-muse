@@ -7,7 +7,7 @@ import org.junit.Test
 /**
  * Pure-Kotlin unit tests for the top-level [computeTopVsSecondRatio]
  * helper that backs [ColorAnalyzer.extractCapturedColor]. The helper takes
- * primitive populations (not [androidx.palette.graphics.Palette.Swatch])
+ * primitive `Int` populations (not a swatch value object)
  * so it is testable in the JVM source set without an Android runtime
  * (per ADR-0002's top-level-fn testability pattern).
  *

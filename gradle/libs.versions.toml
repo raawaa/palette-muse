@@ -19,7 +19,6 @@ hilt = "2.59.2"
 hiltNavigationCompose = "1.2.0"
 room = "2.7.1"
 camerax = "1.5.0"
-palette = "1.0.0"
 coil = "3.2.0"
 lottie = "6.6.0"
 
@@ -63,9 +62,6 @@ camerax-core = { module = "androidx.camera:camera-core", version.ref = "camerax"
 camerax-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camerax" }
 camerax-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
 camerax-view = { module = "androidx.camera:camera-view", version.ref = "camerax" }
-
-# Palette
-palette-ktx = { module = "androidx.palette:palette-ktx", version.ref = "palette" }
 
 # Coil
 coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }

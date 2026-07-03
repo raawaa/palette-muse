@@ -118,9 +118,6 @@ dependencies {
   implementation(libs.camerax.lifecycle)
   implementation(libs.camerax.view)
 
-  // Palette
-  implementation(libs.palette.ktx)
-
   // Lottie
   implementation(libs.lottie.compose)
 

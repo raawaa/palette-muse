@@ -18,3 +18,6 @@ local.properties
 /audit_*.png
 /diag_*.png
 /run_screenshot.png
+
+# Production debug-frame dumps pulled from device (local calibration data, not source)
+/debug-frames/
