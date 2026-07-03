@@ -12,6 +12,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.material.icons.Icons
@@ -400,7 +401,6 @@ fun CameraPreview(
         modifier = Modifier.fillMaxSize()
     )
 }
-
 @Composable
 fun CaptureConfirmSheet(
     pending: PendingCapture,
@@ -423,7 +423,15 @@ fun CaptureConfirmSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(action, color = Color(0xFF8A4853), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                OutlinedButton(onClick = onDismiss) {
+                val retakeBorder = if (pending.isLowConfidence) {
+                    BorderStroke(1.5.dp, Color(0xFF8A4853))
+                } else {
+                    null
+                }
+                OutlinedButton(
+                    onClick = onDismiss,
+                    border = retakeBorder
+                ) {
                     Icon(
                         Icons.Default.Close,
                         contentDescription = "重拍",
@@ -434,7 +442,10 @@ fun CaptureConfirmSheet(
                     Text("重拍", color = Color(0xFF8A4853))
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            if (pending.isLowConfidence) {
+                LowConfidenceHint(visible = true)
+                Spacer(Modifier.height(12.dp))
+            }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Button(
                     onClick = onConfirm,
