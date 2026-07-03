@@ -5,6 +5,7 @@ import androidx.camera.core.CameraSelector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.ColorAnalyzer
+import com.palettemuse.core.CaptureConfidencePolicy
 import com.palettemuse.data.model.ThemeEntity
 import com.palettemuse.data.repository.BitmapStorage
 import com.palettemuse.data.repository.ThemeRepository
@@ -23,7 +24,15 @@ data class TargetState(val name: String, val matchPct: Int, val isFallback: Bool
 data class PendingCapture(
     val imagePath: String,
     val dominantHex: String,
-    val matchedTheme: ThemeEntity?
+    val matchedTheme: ThemeEntity?,
+    /**
+     * Per ADR-0014 / issue #17: `true` when [CaptureConfidencePolicy] flagged
+     * this capture as low-confidence based on `populationShare` and
+     `topVsSecondRatio`. The confirm sheet reads this flag to surface the
+     "this photo's color is unclear" prompt (UI is out of scope for the ADR;
+     the wiring lives here).
+     */
+    val isLowConfidence: Boolean = false,
 )
 
 data class CaptureUiState(
@@ -39,7 +48,8 @@ class CaptureViewModel @Inject constructor(
     private val themeRepository: ThemeRepository,
     private val colorAnalyzer: ColorAnalyzer,
     private val bitmapStorage: BitmapStorage,
-    private val themeMatcher: ThemeMatcher
+    private val themeMatcher: ThemeMatcher,
+    private val captureConfidencePolicy: CaptureConfidencePolicy,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CaptureUiState())
@@ -62,7 +72,8 @@ class CaptureViewModel @Inject constructor(
 
     fun onFrameAnalyzed(bitmap: Bitmap) {
         if (_themes.value.isEmpty()) return // 等待 themes 缓存就绪 (首帧 themes 可能未加载)
-        val sampleHex = colorAnalyzer.extractDominantHex(bitmap)
+        val captured = colorAnalyzer.extractCapturedColor(bitmap)
+        val sampleHex = captured.hex
         val best = themeMatcher.bestMatch(_themes.value, sampleHex)
         // Display-layer smoothing only: capturePhoto() below still uses the
         // raw score for the real shutter decision.
@@ -76,13 +87,15 @@ class CaptureViewModel @Inject constructor(
     fun capturePhoto(bitmap: Bitmap) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isAnalyzing = true)
-            val (imagePath, dominantHex) = withContext(Dispatchers.Default) {
-                bitmapStorage.saveCapture(bitmap) to colorAnalyzer.extractDominantHex(bitmap)
+            val (imagePath, captured) = withContext(Dispatchers.Default) {
+                bitmapStorage.saveCapture(bitmap) to colorAnalyzer.extractCapturedColor(bitmap)
             }
+            val dominantHex = captured.hex
             val matched = themeRepository.findMatchingTheme(dominantHex)
+            val isLowConfidence = captureConfidencePolicy.isLowConfidence(captured)
             _uiState.value = _uiState.value.copy(
                 isAnalyzing = false,
-                pendingCapture = PendingCapture(imagePath, dominantHex, matched)
+                pendingCapture = PendingCapture(imagePath, dominantHex, matched, isLowConfidence)
             )
         }
     }

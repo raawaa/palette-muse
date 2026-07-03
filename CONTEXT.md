@@ -38,8 +38,21 @@ The whole-photo dominant color of a single photo — the color measured at the
 moment of capture and stored as that photo's attribute. It is what "a captured
 color" in match score refers to. When a photo joins an existing theme, its
 captured color is recorded as the photo's own and never overwrites that theme's
-representative color.
+representative color. Every captured color carries a `Captured color
+confidence` alongside the hex so the UI can flag low-confidence picks.
 _Avoid_: 样本色, sample color.
+
+**Captured color confidence (捕获色置信度)**:
+A two-signal measure of how much the captured color stands for the photo's
+actual dominant, as opposed to being one of several substantial swatches.
+`populationShare` is the top Palette swatch's pixel count divided by the
+total pixel count; `topVsSecondRatio` is the top swatch's pixel count divided
+by the second-place swatch's. A photo is `isLowConfidence` when both are
+below the `CaptureConfidencePolicy` thresholds; a low-confidence capture is
+still recorded but flagged to the user so they can override the pick or spin
+up a new theme. The current threshold values are set in the policy module
+and are calibration seeds — see ADR-0014.
+_Avoid_: noise, error, variance, score.
 
 **Seed photo (种子照片)**:
 The photo produced by the capture that creates a theme — the theme's first
