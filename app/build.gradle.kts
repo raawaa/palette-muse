@@ -7,6 +7,21 @@ plugins {
 }
 
 android {
+    // ── Instrumented test gating ──────────────────────────────────────────────────
+    /*
+     * Device-targeted instrumented test execution via palette.targetDevice property.
+     *   device (default):
+     *     ./gradlew :app:connectedDebugAndroidTest
+     *       → runs ColorAnalyzerTest, DebugFrameDumperTest
+     *       → SKIPS Compose UI tests (CaptureConfirmSheetTest, LowConfidenceHintTest,
+     *         ThemeDetailScreenTest), which hang on certain OEM ROMs due to the
+     *         Espresso/Compose idling-resource ↔ Choreographer interaction (#27).
+     *   emulator:
+     *     ./gradlew :app:connectedDebugAndroidTest -Ppalette.targetDevice=emulator
+     *       → runs all androidTest classes including the three Compose UI tests.
+     *   any other value is REJECTED — a typo must not silently fall back to device
+     *   mode and re-introduce the hang. See issue #27 / the #28 triage comment.
+     */
     namespace = "com.palettemuse"
     compileSdk = 36
     defaultConfig {
@@ -14,7 +29,25 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 1
-        versionName = "1.0"
+        // Compose UI tests hang on certain OEM ROMs (#27). Default to "device"
+        // mode (gating on) but REJECT any value other than {"device","emulator"}
+        // — a typo must not silently fall back to "device" and re-introduce
+        // the hang. Runner version: androidx.test:runner:1.7.0
+        // (gradle/libs.versions.toml → androidxTestRunner).
+        val targetDevice = project.findProperty("palette.targetDevice")?.toString() ?: "device"
+        require(targetDevice in setOf("device", "emulator")) {
+            "palette.targetDevice must be 'device' or 'emulator' (got '$targetDevice'). " +
+                "See comment at app/build.gradle.kts:9-24."
+        }
+        logger.lifecycle("palette.targetDevice=$targetDevice — instrumented gating ${
+            if (targetDevice == "device") "ON (skip Compose UI tests)" else "OFF (run all)"
+        }")
+        if (targetDevice == "device") {
+            testInstrumentationRunnerArguments["notClass"] =
+                "com.palettemuse.ui.capture.CaptureConfirmSheetTest," +
+                    "com.palettemuse.ui.capture.LowConfidenceHintTest," +
+                    "com.palettemuse.ui.theme.ThemeDetailScreenTest"
+        }
     }
 
     buildTypes {
