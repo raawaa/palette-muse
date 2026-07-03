@@ -29,6 +29,16 @@ class BitmapStorage @Inject constructor(
         file.absolutePath
     }
 
+    /**
+     * Delete a previously-saved capture file. Best-effort: any IO failure is
+     * swallowed because the only consequence of leaving a stale file behind
+     * is wasted disk space, never a user-visible error. Caller passes the
+     * absolute path returned by [saveCapture].
+     */
+    suspend fun deleteCapture(path: String) = withContext(Dispatchers.IO) {
+        runCatching { File(path).delete() }
+    }
+
     suspend fun saveToGallery(bitmap: Bitmap): Uri? = withContext(Dispatchers.IO) {
         val filename = "PaletteMuse_${System.currentTimeMillis()}.png"
 

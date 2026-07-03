@@ -2,6 +2,8 @@ package com.palettemuse.camera
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.os.Trace
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageCapture
@@ -21,7 +23,20 @@ class CameraManager {
     private var imageCapture: ImageCapture? = null
     private var imageAnalysis: ImageAnalysis? = null
     private var cameraProvider: ProcessCameraProvider? = null
-    private val executor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    /**
+     * Frame analysis executor. Kept separate from [captureExecutor] so a pending
+     * shutter callback does not queue behind an in-flight k-means pass
+     * (CaptureViewModel.capturePhoto perf — ADR-0018).
+     */
+    private val analysisExecutor: ExecutorService = Executors.newSingleThreadExecutor()
+
+    /**
+     * Capture callback executor. The ImageCapture→Bitmap decode runs here so
+     * the main thread stays free across the shutter. Single-thread is enough:
+     * shutter is one-shot.
+     */
+    private val captureExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
     interface FrameAnalyzer {
         fun analyze(bitmap: Bitmap)
@@ -60,7 +75,7 @@ class CameraManager {
                     .setTargetResolution(android.util.Size(640, 480))
                     .build()
                     .also { analysis ->
-                        analysis.setAnalyzer(executor) { imageProxy ->
+                        analysis.setAnalyzer(analysisExecutor) { imageProxy ->
                             analyzeFrame(imageProxy, frameAnalyzer)
                         }
                     }
@@ -74,35 +89,33 @@ class CameraManager {
         }, ContextCompat.getMainExecutor(context))
     }
 
+    /**
+     * Trigger a shutter and deliver the resulting [Bitmap] to [onPhotoTaken].
+     *
+     * Uses `ImageCapture.takePicture(executor, OnImageCapturedCallback)` —
+     * i.e. no MediaStore round-trip. The ImageProxy→Bitmap decode runs on
+     * [captureExecutor], so the main thread stays free for the duration of
+     * the shutter. ADR-0018.
+     */
     fun takePhoto(
-        context: Context,
         onPhotoTaken: (Bitmap) -> Unit,
         onError: (Exception) -> Unit
     ) {
         val capture = imageCapture ?: return
 
-        val outputOptions = ImageCapture.OutputFileOptions.Builder(
-            context.contentResolver,
-            android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            android.content.ContentValues().apply {
-                put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, "capture_${System.currentTimeMillis()}.jpg")
-                put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-            }
-        ).build()
-
         capture.takePicture(
-            outputOptions,
-            ContextCompat.getMainExecutor(context),
-            object : ImageCapture.OnImageSavedCallback {
-                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    val uri = output.savedUri
-                    if (uri != null) {
-                        val bitmap = context.contentResolver.openInputStream(uri)?.use { input ->
-                            android.graphics.BitmapFactory.decodeStream(input)
-                        }
+            captureExecutor,
+            object : ImageCapture.OnImageCapturedCallback() {
+                override fun onCaptureSuccess(image: ImageProxy) {
+                    try {
+                        val bitmap = imageProxyToJpegBitmap(image)
                         if (bitmap != null) {
                             onPhotoTaken(bitmap)
+                        } else {
+                            onError(IllegalStateException("BitmapFactory.decodeByteArray returned null"))
                         }
+                    } finally {
+                        image.close()
                     }
                 }
 
@@ -128,7 +141,8 @@ class CameraManager {
 
     fun cleanup() {
         cameraProvider?.unbindAll()
-        executor.shutdown()
+        analysisExecutor.shutdown()
+        captureExecutor.shutdown()
     }
 
     private fun analyzeFrame(imageProxy: ImageProxy, analyzer: FrameAnalyzer) {
@@ -138,6 +152,23 @@ class CameraManager {
         val height = imageProxy.height
         analyzer.analyze(rgbaBufferToBitmap(buffer, width, height))
         imageProxy.close()
+    }
+
+    /**
+     * Decode an [ImageProxy] carrying JPEG bytes (the default ImageCapture output
+     * format in CameraX 1.5.x) into a [Bitmap]. Returns null if the buffer
+     * cannot be decoded.
+     */
+    private fun imageProxyToJpegBitmap(imageProxy: ImageProxy): Bitmap? {
+        Trace.beginSection("capture.decodeJpeg")
+        return try {
+            val buffer = imageProxy.planes[0].buffer
+            val bytes = ByteArray(buffer.remaining())
+            buffer.get(bytes)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+        } finally {
+            Trace.endSection()
+        }
     }
 
     /**

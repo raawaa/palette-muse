@@ -1,6 +1,7 @@
 package com.palettemuse.ui.capture
 
 import android.graphics.Bitmap
+import android.os.Trace
 import androidx.camera.core.CameraSelector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +15,7 @@ import com.palettemuse.debug.DebugFrameDumper
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -88,12 +90,20 @@ class CaptureViewModel @Inject constructor(
 
     fun capturePhoto(bitmap: Bitmap) {
         viewModelScope.launch {
+            Trace.beginSection("capture.total")
             _uiState.value = _uiState.value.copy(isAnalyzing = true)
             val (imagePath, captured) = withContext(Dispatchers.Default) {
-                bitmapStorage.saveCapture(bitmap) to colorAnalyzer.extractCapturedColor(bitmap)
+                val saveJob = async(Dispatchers.IO) {
+                    traceSection("capture.save") { bitmapStorage.saveCapture(bitmap) }
+                }
+                val analyzeJob = async(Dispatchers.Default) {
+                    traceSection("capture.analyze") { colorAnalyzer.extractCapturedColor(bitmap) }
+                }
+                saveJob.await() to analyzeJob.await()
             }
-            val dominantHex = captured.hex
-            val matched = themeRepository.findMatchingTheme(dominantHex)
+            val matched = traceSection("capture.match") {
+                themeRepository.findMatchingTheme(captured.hex)
+            }
             val isLowConfidence = captureConfidencePolicy.isLowConfidence(captured)
             // Debug-only: dump the bitmap ColorAnalyzer actually saw, alongside
             // the analyzer's verdict. Self-gated inside the dumper (no-op in
@@ -102,8 +112,22 @@ class CaptureViewModel @Inject constructor(
             debugFrameDumper.dump(bitmap, captured, "shutter")
             _uiState.value = _uiState.value.copy(
                 isAnalyzing = false,
-                pendingCapture = PendingCapture(imagePath, dominantHex, matched, isLowConfidence)
+                pendingCapture = PendingCapture(imagePath, captured.hex, matched, isLowConfidence)
             )
+            Trace.endSection()
+        }
+    }
+
+    /**
+     * Wrap [block] in a Perfetto trace section. Traces are no-ops when the host
+     * process hasn't enabled tracing, so this is free in release. ADR-0018.
+     */
+    private inline fun <T> traceSection(name: String, block: () -> T): T {
+        Trace.beginSection(name)
+        return try {
+            block()
+        } finally {
+            Trace.endSection()
         }
     }
 
@@ -139,7 +163,11 @@ class CaptureViewModel @Inject constructor(
     }
 
     fun dismissPending() {
+        val pending = _uiState.value.pendingCapture ?: return
         _uiState.value = _uiState.value.copy(pendingCapture = null)
+        viewModelScope.launch {
+            bitmapStorage.deleteCapture(pending.imagePath)
+        }
     }
 
     @androidx.annotation.VisibleForTesting

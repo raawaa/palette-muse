@@ -30,6 +30,7 @@ attribution is confirmed by the user: accept the match (the photo joins that
 theme), or spin up a new theme; when no theme clears the threshold a new theme
 is unavoidable. A capture the user discards before confirmation does not take
 effect and leaves nothing behind.
+**Persistence**: `filesDir/captures/capture_{ts}.jpg` (App 内部,不在系统相册). See ADR-0018.
 _Avoid_: 拍照, shot (a capture carries color extraction and attribution; a
 plain photo does not).
 
