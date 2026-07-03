@@ -474,13 +474,13 @@ internal fun LowConfidenceHint(visible: Boolean) {
     }
 }
 
-@Preview(name = "LowConfidenceHint — visible")
+@Preview(name = "LowConfidenceHint — visible", showBackground = true, backgroundColor = 0xFFFCF9F8)
 @Composable
 private fun LowConfidenceHintVisiblePreview() {
     LowConfidenceHint(visible = true)
 }
 
-@Preview(name = "LowConfidenceHint — hidden")
+@Preview(name = "LowConfidenceHint — hidden", showBackground = true, backgroundColor = 0xFFFCF9F8)
 @Composable
 private fun LowConfidenceHintHiddenPreview() {
     LowConfidenceHint(visible = false)
