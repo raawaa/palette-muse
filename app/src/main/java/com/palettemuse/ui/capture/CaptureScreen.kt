@@ -76,7 +76,11 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -86,6 +90,7 @@ import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.palettemuse.camera.CameraManager
 import com.palettemuse.theme.Dimens
+import com.palettemuse.theme.HuiwenMincho
 import com.palettemuse.theme.RoseGold
 
 @Composable
@@ -187,8 +192,13 @@ fun CaptureScreen(
                             )
                             val target = uiState.targetTheme
                             Text(
-                                text = if (target.isFallback) "未匹配到主题"
-                                       else "${target.name} ${target.matchPct}% Match",
+                                text = if (target.isFallback) AnnotatedString("未匹配到主题")
+                                       else buildAnnotatedString {
+                                           withStyle(SpanStyle(fontFamily = HuiwenMincho)) {
+                                               append(target.name)
+                                           }
+                                           append(" ${target.matchPct}% Match")
+                                       },
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = RoseGold
@@ -533,7 +543,17 @@ fun CaptureConfirmSheet(
     onDismiss: () -> Unit
 ) {
     val themeName = pending.matchedTheme?.name ?: "新主题"
-    val action = if (pending.matchedTheme != null) "归入【$themeName】？" else "为这个颜色创建新主题？"
+    val action: AnnotatedString = if (pending.matchedTheme != null) {
+        buildAnnotatedString {
+            append("归入【")
+            withStyle(SpanStyle(fontFamily = HuiwenMincho)) {
+                append(themeName)
+            }
+            append("】？")
+        }
+    } else {
+        AnnotatedString("为这个颜色创建新主题？")
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -546,7 +566,7 @@ fun CaptureConfirmSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(action, color = Color(0xFF8A4853), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(text = action, color = Color(0xFF8A4853), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 val retakeBorder = if (pending.isLowConfidence) {
                     BorderStroke(1.5.dp, Color(0xFF8A4853))
                 } else {

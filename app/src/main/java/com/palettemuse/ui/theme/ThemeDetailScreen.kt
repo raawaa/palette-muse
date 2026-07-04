@@ -68,6 +68,7 @@ import com.palettemuse.theme.Dimens
 import com.palettemuse.theme.OnSurface
 import com.palettemuse.theme.OnSurfaceVariant
 import com.palettemuse.theme.OutlineVariant
+import com.palettemuse.theme.HuiwenMincho
 import com.palettemuse.theme.PlayfairDisplay
 import com.palettemuse.theme.PlusJakartaSans
 import com.palettemuse.theme.PrimaryDesign
@@ -227,7 +228,7 @@ private fun ThemeDetailContent(
                     Spacer(Modifier.height(Dimens.stackSm))
                     Text(
                         text = theme.name,
-                        fontFamily = PlayfairDisplay,
+                        fontFamily = HuiwenMincho,
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 28.sp,
                         color = OnSurface,
