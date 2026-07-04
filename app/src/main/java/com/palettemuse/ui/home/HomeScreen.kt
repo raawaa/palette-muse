@@ -1,8 +1,16 @@
 package com.palettemuse.ui.home
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,19 +32,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.AddPhotoAlternate
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -65,6 +80,7 @@ import com.palettemuse.theme.TertiaryFixedDim
 import com.palettemuse.ui.util.parseHex
 import com.palettemuse.ui.util.relativeTimeLabel
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HomeScreen(
     onNavigateToCapture: () -> Unit,
@@ -72,6 +88,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var deleteConfirmThemeId by remember { mutableStateOf<String?>(null) }
 
     Box(
         modifier = Modifier
@@ -146,7 +163,10 @@ fun HomeScreen(
                 items(uiState.themes, key = { it.theme.id }) { themeWithPhotos ->
                     ThemeCard(
                         themeWithPhotos = themeWithPhotos,
+                        isDeleting = uiState.isDeleting,
                         onClick = { onNavigateToThemeDetail(themeWithPhotos.theme.id) },
+                        onLongClick = { viewModel.enterDeleteMode() },
+                        onDelete = { deleteConfirmThemeId = themeWithPhotos.theme.id },
                         modifier = Modifier.padding(horizontal = Dimens.containerMargin)
                     )
                 }
@@ -187,8 +207,19 @@ fun HomeScreen(
                 color = PrimaryDesign,
                 letterSpacing = 0.2.sp * 10f // tracking 0.2em approximation
             )
-            // Search button intentionally removed per brief decision.
-            Spacer(Modifier.width(24.dp))
+            if (uiState.isDeleting) {
+                Text(
+                    text = "完成",
+                    fontFamily = PlusJakartaSans,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    color = PrimaryDesign,
+                    modifier = Modifier.clickable { viewModel.exitDeleteMode() }
+                )
+            } else {
+                // Search button intentionally removed per brief decision.
+                Spacer(Modifier.width(24.dp))
+            }
         }
 
         // ===== Bottom Navigation Bar =====
@@ -196,6 +227,28 @@ fun HomeScreen(
             onCapture = onNavigateToCapture,
             modifier = Modifier.align(Alignment.BottomCenter)
         )
+
+        // ===== Delete confirmation dialog =====
+        deleteConfirmThemeId?.let { themeId ->
+            AlertDialog(
+                onDismissRequest = { deleteConfirmThemeId = null },
+                title = { Text("删除主题") },
+                text = { Text("确定要删除这个主题吗？所有照片将被永久删除。") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.deleteTheme(themeId)
+                            deleteConfirmThemeId = null
+                        }
+                    ) { Text("删除", color = RoseGold) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deleteConfirmThemeId = null }) {
+                        Text("取消")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -203,15 +256,31 @@ fun HomeScreen(
 // Theme Card — large single-column image card with representative color dot
 // ===================================================================
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ThemeCard(
     themeWithPhotos: ThemeWithPhotos,
+    isDeleting: Boolean,
     onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val theme = themeWithPhotos.theme
     val photos = themeWithPhotos.photos
     val coverPath = photos.firstOrNull()?.imagePath
+
+    // Jank (shake) animation when in delete mode
+    val transition = rememberInfiniteTransition(label = "jank")
+    val shakeAngle by transition.animateFloat(
+        initialValue = -2f,
+        targetValue = 2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 120, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shakeAngle"
+    )
 
     Box(
         modifier = modifier
@@ -225,7 +294,11 @@ private fun ThemeCard(
             )
             .clip(RoundedCornerShape(Dimens.cardCorner))
             .background(SurfaceContainer)
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = { if (!isDeleting) onClick() },
+                onLongClick = onLongClick
+            )
+            .rotate(if (isDeleting) shakeAngle else 0f)
     ) {
         // Cover image (Coil AsyncImage — graceful empty if path null/blank)
         if (!coverPath.isNullOrBlank()) {
@@ -296,13 +369,34 @@ private fun ThemeCard(
                     .clip(CircleShape)
                       .background(Color.White, CircleShape)
                       .border(0.5.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-                    .clickable(onClick = onClick),
+                    .clickable(onClick = { if (!isDeleting) onClick() }),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Default.ArrowForward,
                     contentDescription = "查看主题",
-                    tint = PrimaryDesign,
+                    tint = if (isDeleting) OnSurfaceVariant.copy(alpha = 0.3f) else PrimaryDesign,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+
+        // Delete button overlay (top-right X) when in delete mode
+        if (isDeleting) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.9f))
+                    .clickable(onClick = onDelete),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "删除主题",
+                    tint = RoseGold,
                     modifier = Modifier.size(18.dp)
                 )
             }
