@@ -42,46 +42,45 @@ class ColorAnalyzer @Inject constructor() {
         }
         val pixels = IntArray(DOWNSCALE_SIZE * DOWNSCALE_SIZE)
         downscaled.getPixels(pixels, 0, DOWNSCALE_SIZE, 0, 0, DOWNSCALE_SIZE, DOWNSCALE_SIZE)
-
-        val swatches = kMeansQuantize(pixels, k = TARGET_COLOR_COUNT)
-
-        // ADR-0020: measure the confidence signals over perceptually-merged
-        // color families, not raw k-means clusters. A visually-uniform color
-        // that k-means split across several near-duplicate centroids (glare,
-        // grain, JPEG noise) is unioned back into one family here, so its
-        // population share is no longer structurally capped at ~1/k ≈ 0.12.
-        // dominantHex selection is unchanged — still the raw top cluster's
-        // centroid (ADR-0020 Out-of-Scope).
-        val families = mergeSwatchesIntoPerceptualFamilies(swatches)
-
-        val totalPixels = swatches.sumOf { it.population }.coerceAtLeast(1)
-        val dominant = swatches.firstOrNull()
-        val hex = dominant?.rgb?.toHex() ?: "#808080"
-
-        val dominantFamily = families.firstOrNull()
-        val populationShare = (dominantFamily?.population?.toDouble() ?: 0.0) / totalPixels
-
-        // Translate to primitive-population form so the ratio computation is
-        // pure-Kotlin testable in the JVM source set (see below for the rule).
-        val dominantPopulation = dominantFamily?.population
-        val populationOfOthers = families.filter { it != dominantFamily }.map { it.population }
-        val topVsSecondRatio = computeTopVsSecondRatio(dominantPopulation, populationOfOthers)
-
-        return CapturedColor(
-            hex = hex,
-            populationShare = populationShare,
-            topVsSecondRatio = topVsSecondRatio,
-        )
-    }
-
-    private fun Int.toHex(): String {
-        return "#%06X".format(this and 0xFFFFFF)
+        return analyzePixels(pixels)
     }
 
     private companion object {
         const val DOWNSCALE_SIZE = 96
-        const val TARGET_COLOR_COUNT = 12
     }
+}
+
+/**
+ * Pure-Kotlin orchestration: pixel array → CapturedColor.
+ * JVM unit tests can construct an IntArray and call this directly
+ * — no Bitmap, no Android dependency.
+ */
+internal fun analyzePixels(pixels: IntArray): CapturedColor {
+    val swatches = kMeansQuantize(pixels, k = TARGET_COLOR_COUNT)
+    val families = mergeSwatchesIntoPerceptualFamilies(swatches)
+    val totalPixels = swatches.sumOf { it.population }.coerceAtLeast(1)
+    val dominant = swatches.firstOrNull()
+    val hex = dominant?.rgb?.toHex() ?: "#808080"
+    val dominantFamily = families.firstOrNull()
+    val populationShare = (dominantFamily?.population?.toDouble() ?: 0.0) / totalPixels
+    val dominantPopulation = dominantFamily?.population
+    val populationOfOthers = families.filter { it != dominantFamily }.map { it.population }
+    val topVsSecondRatio = computeTopVsSecondRatio(dominantPopulation, populationOfOthers)
+    return CapturedColor(
+        hex = hex,
+        populationShare = populationShare,
+        topVsSecondRatio = topVsSecondRatio,
+    )
+}
+
+/** Number of k-means clusters used for color quantization. */
+internal const val TARGET_COLOR_COUNT = 12
+
+/**
+ * Converts an ARGB integer (alpha ignored) to a `#RRGGBB` hex string.
+ */
+internal fun Int.toHex(): String {
+    return "#%06X".format(this and 0xFFFFFF)
 }
 
 /**
