@@ -54,7 +54,7 @@ class CaptureViewModelTest {
             .setTransactionExecutor(inlineExecutor)
             .setQueryExecutor(inlineExecutor)
             .build()
-        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()), ThemeFactory())
+        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()), ThemeFactory(), storage)
         storage = BitmapStorage(ctx)
         debugFrameDumper = DebugFrameDumper(ctx)
         Dispatchers.setMain(dispatcher)

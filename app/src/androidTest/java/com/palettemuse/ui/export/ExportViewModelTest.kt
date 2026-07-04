@@ -37,6 +37,7 @@ import org.junit.runner.RunWith
 class ExportViewModelTest {
     private lateinit var db: AppDatabase
     private lateinit var repo: ThemeRepository
+    private lateinit var bitmapStorage: BitmapStorage
     private lateinit var context: Context
     private val renderer = PosterRenderer()
     private lateinit var exporter: BitmapStorage
@@ -50,7 +51,8 @@ class ExportViewModelTest {
             .setTransactionExecutor(inlineExecutor)
             .setQueryExecutor(inlineExecutor)
             .build()
-        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()), ThemeFactory())
+        bitmapStorage = BitmapStorage(ApplicationProvider.getApplicationContext())
+        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()), ThemeFactory(), bitmapStorage)
         exporter = BitmapStorage(context)
         Dispatchers.setMain(dispatcher)
     }

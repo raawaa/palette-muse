@@ -8,6 +8,7 @@ import com.palettemuse.core.ColorMatcher
 import com.palettemuse.core.ColorNamer
 import com.palettemuse.data.local.AppDatabase
 import com.palettemuse.data.repository.ThemeRepository
+import com.palettemuse.data.repository.BitmapStorage
 import com.palettemuse.data.repository.ThemeFactory
 import com.palettemuse.data.repository.ThemeMatcher
 import kotlinx.coroutines.Dispatchers
@@ -28,6 +29,7 @@ import org.junit.runner.RunWith
 class HomeViewModelTest {
     private lateinit var db: AppDatabase
     private lateinit var repo: ThemeRepository
+    private lateinit var bitmapStorage: BitmapStorage
     private val dispatcher = StandardTestDispatcher()
 
     @Before fun setup() {
@@ -40,7 +42,8 @@ class HomeViewModelTest {
             .setTransactionExecutor(inlineExecutor)
             .setQueryExecutor(inlineExecutor)
             .build()
-        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()), ThemeFactory())
+        bitmapStorage = BitmapStorage(ApplicationProvider.getApplicationContext())
+        repo = ThemeRepository(db.themeDao(), db.photoDao(), ColorNamer(), ThemeMatcher(ColorMatcher()), ThemeFactory(), bitmapStorage)
         Dispatchers.setMain(dispatcher)
     }
 

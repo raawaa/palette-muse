@@ -21,3 +21,9 @@ local.properties
 
 # Production debug-frame dumps pulled from device (local calibration data, not source)
 /debug-frames/
+
+# Kotlin compiler error logs (build artifacts)
+.kotlin/
+
+# Reason IDE auto-generated metadata
+.reasonix/
