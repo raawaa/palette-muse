@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Palette Muse — Architecture Deepening Review</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default', themeVariables: { primaryColor: '#e0f2fe', edgeLabelBackground: '#fff' } });
+</script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .badge-strong { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+  .badge-explore { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+  .badge-speculative { background: #fce7f3; color: #831843; border: 1px solid #f9a8d4; }
+  .card-before { border-left: 4px solid #f87171; }
+  .card-after { border-left: 4px solid #34d399; }
+  .mermaid-wrapper { background: #f8fafc; border-radius: 0.75rem; padding: 1rem; }
+  .adr-warning { background: #fef2f2; border: 1px solid #fecaca; border-radius: 0.5rem; padding: 0.75rem 1rem; }
+</style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+<div class="max-w-6xl mx-auto px-4 py-8">
+  <!-- Header -->
+  <header class="mb-10">
+    <h1 class="text-3xl font-bold tracking-tight">🎨 Palette Muse</h1>
+    <p class="text-lg text-slate-500 mt-1">Architecture Deepening Review</p>
+    <div class="flex items-center gap-2 mt-4 text-sm text-slate-400">
+      <span>Generated: <time id="timestamp"></time></span>
+      <span class="w-1 h-1 bg-slate-300 rounded-full"></span>
+      <span>Project: <code class="bg-slate-100 px-1.5 py-0.5 rounded text-xs">palette-muse</code></span>
+    </div>
+    <p class="mt-6 text-slate-600 leading-relaxed">
+      本次架构审查基于项目的 <strong>领域语言</strong> (<code>CONTEXT.md</code>) 和
+      <strong>深度模块设计词汇</strong>（深度/浅度、接口、接缝、适配器、杠杆效应、局部性）。
+      每个候选方案都运用了<em>删除测试</em>来评估模块是否值得保留。
+      受 <a href="#adr-index" class="text-blue-600 underline">已记录的 ADR</a> 约束的方案会明确标注。
+    </p>
+  </header>
+
+  <!-- ADR constraint map -->
+  <section id="adr-index" class="mb-10 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+    <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">ADR 约束地图</h2>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+      <div class="bg-slate-50 rounded p-2"><span class="font-mono">ADR-0003</span> — ThemeMatcher 形状已锁定（不再重新审理）</div>
+      <div class="bg-slate-50 rounded p-2"><span class="font-mono">ADR-0006</span> — ColorMatcher 从 android.graphics 解耦；Rgb 已确立</div>
+      <div class="bg-slate-50 rounded p-2"><span class="font-mono">ADR-0012</span> — Poster 渲染合并到 Canvas 渲染器</div>
+      <div class="bg-slate-50 rounded p-2"><span class="font-mono">ADR-0018</span> — Capture 仅写入内部存储</div>
+      <div class="bg-slate-50 rounded p-2"><span class="font-mono">ADR-0019</span> — 置信度信号持久化到已确认的照片上</div>
+      <div class="bg-slate-50 rounded p-2"><span class="font-mono">ADR-0020</span> — Population share 基于感知色族</div>
+    </div>
+  </section>
+
+  <!-- ====================================================================== -->
+  <!-- Candidate 1 -->
+  <!-- ====================================================================== -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <span class="badge-strong text-xs font-semibold px-3 py-1 rounded-full">Strong</span>
+        <h2 class="text-xl font-bold mt-2">#1 CapturedColor 的 hex String → Rgb 值类型</h2>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">涉及的模块</h3>
+        <div class="flex flex-wrap gap-1.5">
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">core/CapturedColor.kt:28</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">core/ColorAnalyzer.kt:59</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">core/ColorMatcher.kt:18-19</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">data/model/PhotoEntity.kt</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">data/model/ThemeEntity.kt</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">data/repository/ThemeMatcher.kt</code>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">推荐强度</h3>
+        <span class="badge-strong text-xs font-semibold px-3 py-1 rounded-full">Strong</span>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="card-before bg-red-50 rounded-lg p-4">
+        <h3 class="font-semibold text-red-800 text-sm uppercase tracking-wide">问题</h3>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          <code>CapturedColor.hex</code> 是一个 <code>String</code>，但整个流水线实际上操作的是数值 RGB。
+          <code>ColorAnalyzer.extractCapturedColor</code> 从 k-means 得到 <code>Int</code> 质心，
+          然后转换为 <code>String</code> 十六进制（第 59 行）。每个消费者——<code>ColorMatcher</code>、
+          <code>ThemeMatcher</code>——都会重新解析这个 <code>String</code> 为 <code>Int</code> 或
+          <code>Rgb</code> 才能使用。
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          数据路径实际是：<strong><code>Int → String → Int → Rgb → Lab</code></strong>，
+          包含三个多余的转换步骤。这是一个<em>数据表示泄露</em>——表示层格式（人可读的十六进制）
+          侵入了核心流水线，强迫每次使用都进行解析。
+        </p>
+      </div>
+      <div class="card-after bg-emerald-50 rounded-lg p-4">
+        <h3 class="font-semibold text-emerald-800 text-sm uppercase tracking-wide">解决方案</h3>
+        <p class="mt-2 text-sm leading-relaxed text-emerald-900">
+          将 <code>CapturedColor.hex</code> 替换为 <code>CapturedColor.rgb: Int</code>（原始 ARGB），
+          并提供一个 <code>val hex: String</code> 计算属性供 UI 层使用。消费者现在直接使用
+          <code>rgb</code> 而无需解析。
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-emerald-900">
+          <code>ThemeEntity.representativeHex</code> 和 <code>PhotoEntity.capturedHex</code>
+          同理迁移为 <code>representativeRgb: Int</code> / <code>capturedRgb: Int</code>，
+          在序列化到 Room 时保持数值形式。
+        </p>
+      </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">Before / After</h3>
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph LR
+  subgraph Before["当前：3 次多余转换"]
+    A["ColorAnalyzer<br/>(k-means Int centroid)"] -->|".toColorString()"| B["String hex<br/>#FF6B35"]
+    B -->|"parseHexRgb()"| C["Rgb(r,g,b)"]
+    C -->|"rgbToLab()"| D["Lab L,a,b<br/>(实际计算)"]
+    B -->|"parseHexRgb()"| E["ColorMatcher<br/>deltaE()"]
+  end
+  style Before fill:#fef2f2,stroke:#f87171
+        </div>
+      </div>
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph LR
+  subgraph After["Int 一路到底"]
+    A["ColorAnalyzer<br/>(k-means Int centroid)"] -->|"直接传递"| B["CapturedColor.rgb: Int"]
+    B -->|"rgbToLab()"| D["Lab L,a,b<br/>(实际计算)"]
+    B -->|"deltaE()"| E["ColorMatcher"]
+    B -.->|".toHexString()"| F["UI 显示<br/>(唯一需要 String 的地方)"]
+  end
+  style After fill:#f0fdf4,stroke:#34d399
+        </div>
+      </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">收益</h3>
+    <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+      <li><strong>局部性</strong>：颜色表示现在集中在一个地方（<code>Int</code>），所有消费者使用相同的数据类型。解析逻辑不再分散在 <code>ColorMatcher</code>、<code>ThemeMatcher</code> 和 UI 工具函数之间。</li>
+      <li><strong>杠杆效应</strong>：一个数据库迁移（<code>hex String → rgb Int</code>）使整个流水线从 5 步减少到 3 步。每个下游消费者自动获益。</li>
+      <li><strong>可测性</strong>：移除所有解析步骤，消除了一整类因十六进制格式差异（前缀 <code>#</code> vs 无前缀、大小写）导致的错误。测试可以直接使用数值断言。</li>
+      <li>流水线中的 CPU 周期减少约 <strong>3 次字符串分配 + 3 次解析</strong> 每次捕获。</li>
+    </ul>
+
+    <div class="adr-warning mt-4">
+      <p class="text-sm font-semibold text-red-700">⚠️ ADR 检查</p>
+      <p class="text-sm text-red-600 mt-1">
+        <span class="font-mono">ADR-0006</span> 建立了 <code>Rgb</code> 数据类并解耦了 <code>ColorMatcher</code> 的 Android 依赖。
+        本提案在此基础上更进一步——将 <code>hex String</code> 提升为 <code>rgb Int</code>——并不与任何现有决策冲突。
+        <span class="font-mono">ADR-0003</span> 锁定了 <code>ThemeMatcher</code> 的形状（类 + 私有阈值），
+        但并未对其<em>消费的数据类型</em>做出裁决；传递 <code>Int</code> 而非 <code>String</code> 不会改变其形状。
+        数据库迁移（<code>String → Int</code> 列）需要相应的 Room 迁移；这是可接受的成本。
+      </p>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- Candidate 2 -->
+  <!-- ====================================================================== -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <span class="badge-strong text-xs font-semibold px-3 py-1 rounded-full">Strong</span>
+        <h2 class="text-xl font-bold mt-2">#2 ColorAnalyzer 编排逻辑可单元测试化</h2>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">涉及的模块</h3>
+        <div class="flex flex-wrap gap-1.5">
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">core/ColorAnalyzer.kt:33-70</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">core/KMeansColorQuantizer.kt</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">core/PerceptualColorFamilies.kt</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">core/CaptureConfidencePolicy.kt</code>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">推荐强度</h3>
+        <span class="badge-strong text-xs font-semibold px-3 py-1 rounded-full">Strong</span>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="card-before bg-red-50 rounded-lg p-4">
+        <h3 class="font-semibold text-red-800 text-sm uppercase tracking-wide">问题</h3>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          <code>ColorAnalyzer.extractCapturedColor(bitmap: Bitmap)</code> 是整个颜色流水线的顶端——它编排了下采样、k-means 聚类、感知色族合并、置信度信号计算和 <code>CapturedColor</code> 组装。
+          然而，因为它的签名接受 Android <code>Bitmap</code>，整个编排只能通过插桩测试来覆盖。
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          <strong>删除测试</strong>：删除此方法意味着下采样 + k-means + 合并 + 信号计算——所有这些都重新分散到它们的调用者（<code>CaptureViewModel</code>）中。
+          复杂性确实是集中的。但该模块因为缺少<em>内部接缝</em>而显得浅薄——使纯逻辑依赖于 Android <code>Bitmap</code>。
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          目前，仅辅助函数 <code>computeTopVsSecondRatio</code> 有单元测试（<code>ColorAnalyzerRatioTest</code>，
+          6 个分支）。主方法 <code>extractCapturedColor</code> 的编排逻辑——参数顺序、默认常量、分支逻辑——完全没有
+          通过 JVM 测试来验证。
+        </p>
+      </div>
+      <div class="card-after bg-emerald-50 rounded-lg p-4">
+        <h3 class="font-semibold text-emerald-800 text-sm uppercase tracking-wide">解决方案</h3>
+        <p class="mt-2 text-sm leading-relaxed text-emerald-900">
+          将纯粹的算法步骤从 Android 边界中提取出来：
+        </p>
+        <ul class="mt-2 text-sm leading-relaxed text-emerald-900 list-disc list-inside space-y-1">
+          <li><code>downscaleBitmap(bitmap: Bitmap, maxPx: Int): IntArray</code> — 缩小尺寸并提取像素（仍是 Android 依赖，但提取到一个单一职责函数）</li>
+          <li><code>analyzePixels(pixels: IntArray): CapturedColor</code> — 纯 Kotlin 编排：k-means → 感知合并 → 置信度信号 → <code>CapturedColor</code></li>
+        </ul>
+        <p class="mt-2 text-sm leading-relaxed text-emerald-900">
+          <code>extractCapturedColor</code> 变为：
+          <code class="block bg-white/60 px-2 py-1 rounded mt-1 text-xs">fun extractCapturedColor(bitmap: Bitmap) = analyzePixels(downscaleBitmap(bitmap, MAX_PIXELS))</code>
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-emerald-900">
+          现在 <code>analyzePixels</code> 是纯 Kotlin，可直接用于 JVM 单元测试。
+        </p>
+      </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">Before / After</h3>
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph TD
+  subgraph Before["extractCapturedColor(bitmap: Bitmap) — 所有逻辑都 Android 绑定"]
+    A["Bitmap 输入"] --> B["下采样 + 读像素"]
+    B --> C["k-means 量化"]
+    C --> D["感知色族合并"]
+    D --> E["置信度信号"]
+    E --> F["CapturedColor"]
+  end
+  style Before fill:#fef2f2,stroke:#f87171
+  style F fill:#fef2f2
+        </div>
+      </div>
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph TD
+  subgraph After["提取出纯 Kotlin 编排"]
+    A["Bitmap 输入"] --> B["downscaleBitmap()<br/>Android 依赖，单一职责"]
+    B -->|"IntArray 像素"| C["analyzePixels()<br/>纯 Kotlin ✅ JVM 可测"]
+    C --> D["k-means 量化"]
+    D --> E["感知色族合并"]
+    E --> F["置信度信号"]
+    F --> G["CapturedColor"]
+  end
+  style After fill:#f0fdf4,stroke:#34d399
+  style C fill:#bbf7d0
+        </div>
+      </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">收益</h3>
+    <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+      <li><strong>可测性</strong>：<code>analyzePixels</code> 接受 <code>IntArray</code>——在 JVM 上可直接构造。回归测试可以覆盖边缘情况（纯色、噪点图像、渐变、小尺寸），无需模拟器。</li>
+      <li><strong>局部性</strong>：编排逻辑（k-means 参数、默认值、分支顺序）现在集中在一个纯 Kotlin 函数中，而不是跨 Android 边界分布。</li>
+      <li><strong>杠杆效应</strong>：对一个纯函数的测试覆盖了整个颜色流水线的调用树。对 <code>analyzePixels</code> 的一次更改会安全地影响所有调用者。</li>
+      <li><strong>速度</strong>：这些测试可以在亚毫秒级运行，而不是需要模拟器启动的插桩测试。</li>
+    </ul>
+
+    <div class="adr-warning mt-4">
+      <p class="text-sm font-semibold text-red-700">⚠️ ADR 检查</p>
+      <p class="text-sm text-red-600 mt-1">
+        <span class="font-mono">ADR-0002</span> 建立的模式——提取纯 Kotlin 顶层函数——这里再次应用。
+        <span class="font-mono">ADR-0006</span> 为 <code>ColorMatcher</code> 做了类似的事情（从 Android 框架解耦纯逻辑）。
+        本提案遵循相同的经实战检验的模式。无冲突。
+      </p>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- Candidate 3 -->
+  <!-- ====================================================================== -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <span class="badge-strong text-xs font-semibold px-3 py-1 rounded-full">Strong</span>
+        <h2 class="text-xl font-bold mt-2">#3 BitmapStorage 接口提取</h2>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">涉及的模块</h3>
+        <div class="flex flex-wrap gap-1.5">
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">data/repository/BitmapStorage.kt</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">di/AppModule.kt</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">ui/capture/CaptureViewModel.kt</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">ui/export/ExportViewModel.kt</code>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">推荐强度</h3>
+        <span class="badge-strong text-xs font-semibold px-3 py-1 rounded-full">Strong</span>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="card-before bg-red-50 rounded-lg p-4">
+        <h3 class="font-semibold text-red-800 text-sm uppercase tracking-wide">问题</h3>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          <code>BitmapStorage</code> 是一个 <code>@Singleton @Inject</code> 具体类，
+          将文件 I/O（保存、删除、写入到 MediaStore）直接绑定到其接口。
+          <code>CaptureViewModel</code> 依赖它来保存和删除捕获文件；
+          <code>ExportViewModel</code> 依赖它来保存到系统相册。
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          目前 <code>CaptureViewModel</code> 接受 6 个具体依赖项（第 61-67 行）。
+          BitmapStorage 是唯一一个包含 I/O 副作用的依赖项——其他依赖项（<code>ThemeRepository</code>、
+          <code>ColorAnalyzer</code>、<code>ThemeMatcher</code>）是纯函数或可模拟的。
+          将 BitmapStorage 提升为接口会打开一条接缝，使 ViewModel 可以在 JVM 上进行纯单元测试。
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          <strong>删除测试</strong>：删除 <code>BitmapStorage</code> 会将其文件 I/O 分散到
+          <code>CaptureViewModel</code> 和 <code>ExportViewModel</code> 中，<em>并且</em>
+          将文件路径约定（<code>captures/capture_{ts}.jpg</code>）复制到两个地方——这是真正的复杂性。
+          模块不浅薄；它缺少的是一个合适的<strong>接缝</strong>。
+        </p>
+      </div>
+      <div class="card-after bg-emerald-50 rounded-lg p-4">
+        <h3 class="font-semibold text-emerald-800 text-sm uppercase tracking-wide">解决方案</h3>
+        <p class="mt-2 text-sm leading-relaxed text-emerald-900">
+          从具体类中提取 <code>interface BitmapStorage</code>：
+        </p>
+        <ul class="mt-2 text-sm leading-relaxed text-emerald-900 list-disc list-inside space-y-1">
+          <li><code>interface BitmapStorage { fun saveCapture(…); fun deleteCapture(…); fun saveToGallery(…) }</code></li>
+          <li>当前实现重命名为 <code>FileBitmapStorage</code> 并实现该接口。</li>
+          <li>添加一个 <code>InMemoryBitmapStorage</code> 用于测试（在内存映射中保留字节）。</li>
+          <li><code>CaptureViewModel</code> 和 <code>ExportViewModel</code> 依赖接口。</li>
+          <li>在 Hilt 模块中绑定：<code>@Binds BitmapStorage FileBitmapStorage</code>。</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">Before / After</h3>
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph TD
+  subgraph Before["具体类阻塞测试"]
+    VM["CaptureViewModel"] -->|"具体依赖"| BS["BitmapStorage<br/>(具体类)"]
+    EVM["ExportViewModel"] -->|"具体依赖"| BS
+    BS -->|"文件 I/O"| FS["filesDir/captures/"]
+    BS -->|"文件 I/O"| MS["MediaStore"]
+    VM_Test["CaptureViewModelTest"] -->|"Android 插桩<br/>必须处理真实文件 I/O"| BS
+  end
+  style Before fill:#fef2f2,stroke:#f87171
+        </div>
+      </div>
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph TD
+  subgraph After["接口接缝实现测试隔离"]
+    VM["CaptureViewModel"] -->|"依赖接口"| I["«interface»<br/>BitmapStorage"]
+    EVM["ExportViewModel"] -->|"依赖接口"| I
+    I -->|"生产绑定"| FBS["FileBitmapStorage"]
+    I -->|"测试绑定"| IMBS["InMemoryBitmapStorage<br/>(HashMap&lt;String, ByteArray&gt;)"]
+    FBS --> FS["filesDir/captures/"]
+    FBS --> MS["MediaStore"]
+    VM_Test["CaptureViewModel JVM 测试"] --> IMBS
+  end
+  style After fill:#f0fdf4,stroke:#34d399
+  style I fill:#bfdbfe,stroke:#3b82f6
+  style IMBS fill:#bbf7d0
+        </div>
+      </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">收益</h3>
+    <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+      <li><strong>可测性</strong>：<code>CaptureViewModel</code> 和 <code>ExportViewModel</code> 现在可以在纯 JVM 测试中构造，使用内存中的 fake 存储，无需文件系统副作用。</li>
+      <li><strong>局部性</strong>：文件路径约定编码在 <code>FileBitmapStorage</code> 中，而不是在 ViewModel 中或在路径上硬编码。</li>
+      <li><strong>杠杆效应</strong>：一个接缝（接口）允许两种适配器——生产环境的文件和测试环境的内存。同时为未来提供可能性（例如，加密存储适配器、云同步适配器）。</li>
+      <li>遵循 <code>codebase-design</code> 原则："两个适配器意味着一个真实的接缝。" 在这里，我们已经有删除（<code>deleteCapture</code>）和保存（<code>saveCapture</code>）两个适配器，它们通过具体类绑定在一起。接口提取使接缝变得明确。</li>
+    </ul>
+
+    <div class="adr-warning mt-4">
+      <p class="text-sm font-semibold text-red-700">⚠️ ADR 检查</p>
+      <p class="text-sm text-red-600 mt-1">
+        无冲突。<span class="font-mono">ADR-0018</span> 规定捕获写入 <code>filesDir/captures/</code>
+        且不使用 MediaStore——这由 <code>FileBitmapStorage</code> 强制执行，不受接口提取影响。
+        <span class="font-mono">ADR-0018</span> 还规定了 <code>deleteCapture</code> 的语义
+        （尽力而为，忽略 I/O 错误）——这些语义保留在适配器中。
+      </p>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- Candidate 4 -->
+  <!-- ====================================================================== -->
+  <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-8">
+    <div class="flex items-start justify-between mb-4">
+      <div>
+        <span class="badge-explore text-xs font-semibold px-3 py-1 rounded-full">Worth exploring</span>
+        <h2 class="text-xl font-bold mt-2">#4 PosterRenderer 布局数学与 Canvas 绘制分离</h2>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">涉及的模块</h3>
+        <div class="flex flex-wrap gap-1.5">
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">core/PosterRenderer.kt:27-147</code>
+          <code class="bg-slate-100 px-2 py-0.5 rounded text-xs">ui/export/ExportViewModel.kt</code>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-1">推荐强度</h3>
+        <span class="badge-explore text-xs font-semibold px-3 py-1 rounded-full">Worth exploring</span>
+      </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-6 mb-6">
+      <div class="card-before bg-red-50 rounded-lg p-4">
+        <h3 class="font-semibold text-red-800 text-sm uppercase tracking-wide">问题</h3>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          <code>PosterRenderer.render</code> 将布局数学（计算网格位置、胶片条矩形、日记布局偏移量）
+          与 Canvas 绘制命令（<code>drawBitmap</code>、<code>drawText</code>、<code>drawRoundRect</code>）
+          混合在一个大函数中。四个模板渲染器（<code>renderGrid</code>、<code>renderFilm</code>、
+          <code>renderJournal</code>、<code>renderMinimal</code>）各有自己的布局逻辑，嵌入在 Canvas 调用中。
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          <strong>删除测试</strong>：删除 <code>PosterRenderer</code> 会将 120 行布局 + Canvas 逻辑
+          分散到 <code>ExportViewModel</code> 中。复杂性是真实的，但布局数学和 Canvas 绘制之间没有接缝——
+          它们无法独立测试。
+        </p>
+        <p class="mt-2 text-sm leading-relaxed text-red-900">
+          <code>PosterRendererTest</code>（插桩测试）渲染真实位图并检查输出尺寸，但无法测试布局细节
+          （照片是否在正确的位置、文本是否居中）而不进行复杂的位图比较。
+        </p>
+      </div>
+      <div class="card-after bg-emerald-50 rounded-lg p-4">
+        <h3 class="font-semibold text-emerald-800 text-sm uppercase tracking-wide">解决方案</h3>
+        <p class="mt-2 text-sm leading-relaxed text-emerald-900">
+          提取布局数学到纯函数中，返回描述性的数据结构，然后由 Canvas 渲染器消费：
+        </p>
+        <ul class="mt-2 text-sm leading-relaxed text-emerald-900 list-disc list-inside space-y-1">
+          <li><code>PosterLayoutEngine.computeGridLayout(photoCount, w, h): List&lt;Rect&gt;</code></li>
+          <li><code>PosterLayoutEngine.computeFilmLayout(photoCount, w, h): FilmLayout</code></li>
+          <li>每个函数返回位置/尺寸/间距，而不触及 Canvas。</li>
+        </ul>
+        <p class="mt-2 text-sm leading-relaxed text-emerald-900">
+          然后 <code>PosterRenderer</code> 保持不变，但现在调用 <code>PosterLayoutEngine</code>
+          来获取布局，再进行绘制。布局逻辑现在可以在 JVM 上通过纯函数进行单元测试。
+        </p>
+      </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">Before / After</h3>
+    <div class="grid md:grid-cols-2 gap-4 mb-6">
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph TD
+  subgraph Before["Canvas 绘制和布局数学混合"]
+    PR["PosterRenderer.render()"] --> RG["renderGrid()"]
+    PR --> RF["renderFilm()"]
+    PR --> RJ["renderJournal()"]
+    PR --> RM["renderMinimal()"]
+    RG -->|"边界计算 + drawBitmap + drawText"| O["Canvas 输出"]
+    RF -->|"偏移量计算 + drawBitmap + drawRect"| O
+    Test["PosterRendererTest<br/>(Android 插桩)"] -->|"只能测试位图输出"| PR
+  end
+  style Before fill:#fef2f2,stroke:#f87171
+        </div>
+      </div>
+      <div class="mermaid-wrapper">
+        <div class="mermaid">
+graph TD
+  subgraph After["布局数学 → 纯函数"]
+    LE["PosterLayoutEngine<br/>(纯 Kotlin)"] -->|"List&lt;Rect&gt;"| PR["PosterRenderer"]
+    LE -->|"FilmLayout"| PR
+    JVM_Test["LayoutTest<br/>(JVM 单元测试)"] -->|"断言矩形位置<br/>间距、居中"| LE
+    PR -->|"仅 Canvas 绘制"| O["Canvas 输出"]
+  end
+  style After fill:#f0fdf4,stroke:#34d399
+  style LE fill:#bbf7d0
+        </div>
+      </div>
+    </div>
+
+    <h3 class="font-semibold mb-2">收益</h3>
+    <ul class="list-disc list-inside text-sm text-slate-600 space-y-1">
+      <li><strong>可测性</strong>：布局逻辑（网格间距、胶片偏移量、日记行高、填充）可以在 JVM 上进行单元测试，无需位图渲染。测试可以断言确切的 <code>RectF</code> 坐标。</li>
+      <li><strong>局部性</strong>：布局算法集中在 <code>PosterLayoutEngine</code> 中，而不是分布在四个渲染器函数之间。</li>
+      <li><strong>杠杆效应</strong>：添加新模板时，只需要新的引擎函数和新的渲染器。测试新模板的布局不需要渲染位图。</li>
+    </ul>
+
+    <div class="adr-warning mt-4">
+      <p class="text-sm font-semibold text-red-700">⚠️ ADR 检查</p>
+      <p class="text-sm text-red-600 mt-1">
+        <span class="font-mono">ADR-0012</span> 将 poster 预览统一到 Canvas 渲染器——但那是关于预览与导出渲染路径的合并，
+        而不是关于从绘制中分离布局数学。提取布局纯函数保持了渲染路径的完整性；它只是使逻辑可测试。
+        无冲突。
+      </p>
+    </div>
+  </div>
+
+  <!-- ====================================================================== -->
+  <!-- Top Recommendation -->
+  <!-- ====================================================================== -->
+  <section class="bg-indigo-50 rounded-xl border border-indigo-200 p-6 mb-8">
+    <h2 class="text-xl font-bold text-indigo-900 mb-3">🏆 首选推荐</h2>
+    <div class="flex items-start gap-4">
+      <div class="bg-indigo-100 rounded-full px-3 py-1 text-indigo-800 font-bold text-lg shrink-0 mt-1">#1</div>
+      <div>
+        <h3 class="font-bold text-indigo-900 text-lg">CapturedColor hex String → Rgb 值类型</h3>
+        <p class="mt-2 text-sm leading-relaxed text-indigo-800">
+          首选从 <strong>CapturedColor 类型泄露</strong>入手。原因如下：
+        </p>
+        <ul class="mt-2 text-sm leading-relaxed text-indigo-800 list-disc list-inside space-y-1">
+          <li><strong>影响面最广</strong>——它触及流水线的每一层：<code>ColorAnalyzer</code>、<code>ColorMatcher</code>、<code>ThemeMatcher</code>、实体模型、Room DB。修复它会使整个流水线从 5 步减少到 3 步。</li>
+          <li><strong>消除一整类错误</strong>——十六进制格式差异（# 前缀、大小写、前导零）不能再悄悄进入系统。</li>
+          <li><strong>下游收益</strong>——一旦 <code>CapturedColor</code> 存储原始 <code>Int</code>，候选 #2（编排测试性）也变得更容易，因为 <code>analyzePixels</code> 返回的 <code>Int</code> 无需字符串转换即可传递。</li>
+          <li><strong>低成本、高确定性</strong>——类型变化是机械性的。Room 迁移需要额外的关注，但变更范围是明确且有限的。</li>
+          <li><strong>与现有 ADR 一致</strong>——建立在 ADR-0006 的 <code>Rgb</code> 类型基础上，不冲突。</li>
+        </ul>
+        <p class="mt-3 text-sm leading-relaxed text-indigo-800">
+          候选 #3（BitmapStorage 接口）作为第二优先级，因为它解锁了 ViewModel 的 JVM 可测试性。
+          候选 #2（ColorAnalyzer 提取）在 #1 之后更易于实现，因为数据表示已经理顺。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-200 pt-6 text-xs text-slate-400">
+    <p>Palette Muse — Architecture Deepening Review · 使用 Tailwind CSS + Mermaid 构建</p>
+    <p>词汇表：<span class="font-mono">CONTEXT.md</span>（领域语言）+ <span class="font-mono">codebase-design</span>（模块/接口/深度/接缝/适配器）</p>
+  </footer>
+</div>
+
+<script>
+  document.getElementById('timestamp').textContent = new Date().toISOString().slice(0, 19).replace('T', ' ');
+</script>
+
+</body>
+</html>
