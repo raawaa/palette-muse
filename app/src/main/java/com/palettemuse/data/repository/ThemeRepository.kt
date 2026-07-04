@@ -32,15 +32,32 @@ class ThemeRepository @Inject constructor(
     suspend fun savePhotoToTheme(
         themeId: String,
         imagePath: String,
-        dominantHex: String
+        dominantHex: String,
+        populationShare: Double? = null,
+        topVsSecondRatio: Double? = null,
+        isLowConfidence: Boolean? = null
     ) {
-        photoDao.insert(themeFactory.createCapture(themeId, dominantHex, imagePath))
+        photoDao.insert(
+            themeFactory.createCapture(
+                themeId, dominantHex, imagePath,
+                populationShare, topVsSecondRatio, isLowConfidence
+            )
+        )
         touchTheme(themeId)
     }
 
-    suspend fun createThemeAndSave(imagePath: String, dominantHex: String): String {
+    suspend fun createThemeAndSave(
+        imagePath: String,
+        dominantHex: String,
+        populationShare: Double? = null,
+        topVsSecondRatio: Double? = null,
+        isLowConfidence: Boolean? = null
+    ): String {
         val name = colorNamer.nameColor(dominantHex)
-        val (theme, photo) = themeFactory.createSeed(name, dominantHex, imagePath)
+        val (theme, photo) = themeFactory.createSeed(
+            name, dominantHex, imagePath,
+            populationShare, topVsSecondRatio, isLowConfidence
+        )
         themeDao.insert(theme)
         photoDao.insert(photo)
         return theme.id

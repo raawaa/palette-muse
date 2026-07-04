@@ -24,7 +24,7 @@ object AppModule {
             AppDatabase::class.java,
             "palette_muse.db"
         )
-            .addMigrations(AppDatabase.MIGRATION_2_3)
+            .addMigrations(AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
             .build()
     }
 

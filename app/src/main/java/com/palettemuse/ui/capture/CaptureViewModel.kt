@@ -33,11 +33,19 @@ data class PendingCapture(
     /**
      * Per ADR-0014 / issue #17: `true` when [CaptureConfidencePolicy] flagged
      * this capture as low-confidence based on `populationShare` and
-     `topVsSecondRatio`. The confirm sheet reads this flag to surface the
-     "this photo's color is unclear" prompt (UI is out of scope for the ADR;
-     the wiring lives here).
+     * `topVsSecondRatio`. The confirm sheet reads this flag to surface the
+     * "this photo's color is unclear" prompt (UI is out of scope for the ADR;
+     * the wiring lives here).
      */
     val isLowConfidence: Boolean = false,
+    /**
+     * The two [CaptureConfidencePolicy] input signals captured at the shutter
+     * press, forwarded into [PhotoEntity] on confirm so a low-confidence
+     * verdict can be audited after the fact (adb run-as + sqlite3). See
+     * ADR-0019. Nullable because [setPending] test fixtures may omit them.
+     */
+    val populationShare: Double? = null,
+    val topVsSecondRatio: Double? = null
 )
 
 data class CaptureUiState(
@@ -117,7 +125,10 @@ class CaptureViewModel @Inject constructor(
             viewModelScope.launch(Dispatchers.IO) { debugFrameDumper.dump(bitmap, captured, "shutter") }
             _uiState.value = _uiState.value.copy(
                 isAnalyzing = false,
-                pendingCapture = PendingCapture(imagePath, captured.hex, matched, isLowConfidence)
+                pendingCapture = PendingCapture(
+                    imagePath, captured.hex, matched, isLowConfidence,
+                    captured.populationShare, captured.topVsSecondRatio
+                )
             )
             Log.i("CapturePerf", "sheet shown +${SystemClock.elapsedRealtime() - t0}ms")
         }
@@ -141,9 +152,15 @@ class CaptureViewModel @Inject constructor(
         viewModelScope.launch {
             val matched = pending.matchedTheme
             if (matched != null) {
-                themeRepository.savePhotoToTheme(matched.id, pending.imagePath, pending.dominantHex)
+                themeRepository.savePhotoToTheme(
+                    matched.id, pending.imagePath, pending.dominantHex,
+                    pending.populationShare, pending.topVsSecondRatio, pending.isLowConfidence
+                )
             } else {
-                themeRepository.createThemeAndSave(pending.imagePath, pending.dominantHex)
+                themeRepository.createThemeAndSave(
+                    pending.imagePath, pending.dominantHex,
+                    pending.populationShare, pending.topVsSecondRatio, pending.isLowConfidence
+                )
             }
             _uiState.value = _uiState.value.copy(pendingCapture = null)
         }
@@ -152,7 +169,10 @@ class CaptureViewModel @Inject constructor(
     fun saveAsNewTheme() {
         val pending = _uiState.value.pendingCapture ?: return
         viewModelScope.launch {
-            themeRepository.createThemeAndSave(pending.imagePath, pending.dominantHex)
+            themeRepository.createThemeAndSave(
+                pending.imagePath, pending.dominantHex,
+                pending.populationShare, pending.topVsSecondRatio, pending.isLowConfidence
+            )
             _uiState.value = _uiState.value.copy(pendingCapture = null)
         }
     }

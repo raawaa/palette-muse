@@ -6,7 +6,14 @@ import java.util.UUID
 import javax.inject.Inject
 
 class ThemeFactory @Inject constructor() {
-    fun createSeed(name: String, dominantHex: String, imagePath: String): Pair<ThemeEntity, PhotoEntity> {
+    fun createSeed(
+        name: String,
+        dominantHex: String,
+        imagePath: String,
+        populationShare: Double? = null,
+        topVsSecondRatio: Double? = null,
+        isLowConfidence: Boolean? = null
+    ): Pair<ThemeEntity, PhotoEntity> {
         val themeId = UUID.randomUUID().toString()
         val theme = ThemeEntity(
             id = themeId,
@@ -18,18 +25,31 @@ class ThemeFactory @Inject constructor() {
             themeId = themeId,
             imagePath = imagePath,
             dominantHex = dominantHex,
-            isSeed = true
+            isSeed = true,
+            populationShare = populationShare,
+            topVsSecondRatio = topVsSecondRatio,
+            isLowConfidence = isLowConfidence
         )
         return Pair(theme, photo)
     }
 
-    fun createCapture(themeId: String, dominantHex: String, imagePath: String): PhotoEntity {
+    fun createCapture(
+        themeId: String,
+        dominantHex: String,
+        imagePath: String,
+        populationShare: Double? = null,
+        topVsSecondRatio: Double? = null,
+        isLowConfidence: Boolean? = null
+    ): PhotoEntity {
         return PhotoEntity(
             id = UUID.randomUUID().toString(),
             themeId = themeId,
             imagePath = imagePath,
             dominantHex = dominantHex,
-            isSeed = false
+            isSeed = false,
+            populationShare = populationShare,
+            topVsSecondRatio = topVsSecondRatio,
+            isLowConfidence = isLowConfidence
         )
     }
 }

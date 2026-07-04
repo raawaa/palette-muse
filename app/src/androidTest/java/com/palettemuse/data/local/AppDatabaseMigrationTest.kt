@@ -4,6 +4,7 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -60,6 +61,48 @@ class AppDatabaseMigrationTest {
             "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('projects','color_palettes')"
         ).use { c ->
             assertEquals(0, c.count)
+        }
+        db.close()
+    }
+
+    @Test fun migrate_3_to_4_addsConfidenceSignalColumns_preservesPhotos() {
+        // Build v3 schema + insert a theme + photo
+        helper.createDatabase("test-v3", 3).apply {
+            execSQL(
+                """CREATE TABLE IF NOT EXISTS `themes` (
+                `id` TEXT NOT NULL, `name` TEXT NOT NULL, `representativeHex` TEXT NOT NULL,
+                `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`id`))"""
+            )
+            execSQL("""INSERT INTO `themes` VALUES ('t1', 'Test Theme', '#DCA8A6', 0, 0)""")
+            execSQL(
+                """CREATE TABLE IF NOT EXISTS `photos` (
+                `id` TEXT NOT NULL, `themeId` TEXT NOT NULL, `imagePath` TEXT NOT NULL,
+                `dominantHex` TEXT NOT NULL, `isSeed` INTEGER NOT NULL, `capturedAt` INTEGER NOT NULL,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`themeId`) REFERENCES `themes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)"""
+            )
+            execSQL(
+                """INSERT INTO `photos` VALUES
+                ('p1', 't1', '/cap.jpg', '#DCA8A6', 0, 0)"""
+            )
+            close()
+        }
+        // Run MIGRATION_3_4 → validates schema against the exported v4 JSON
+        val db = helper.runMigrationsAndValidate("test-v3", 4, true, AppDatabase.MIGRATION_3_4)
+        // photo row survived, and the new signal columns are NULL on legacy rows
+        // (ADR-0019: pre-migration photos predate the audit corpus)
+        db.query(
+            """SELECT dominantHex, populationShare, topVsSecondRatio, isLowConfidence
+               FROM `photos` WHERE id='p1'"""
+        ).use { c ->
+            c.moveToFirst()
+            assertEquals("#DCA8A6", c.getString(0))
+            // legacy rows carry NULL signals (cursor.getDouble returns 0.0 for NULL,
+            // so assert via isNull — ADR-0019: pre-migration photos predate the audit corpus)
+            assertTrue(c.isNull(1))
+            assertTrue(c.isNull(2))
+            assertTrue(c.isNull(3))
         }
         db.close()
     }
