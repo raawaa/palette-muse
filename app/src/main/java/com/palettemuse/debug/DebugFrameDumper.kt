@@ -13,6 +13,8 @@ import java.util.Locale
 import java.util.TimeZone
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Debug-only dumper for the bitmap that [com.palettemuse.core.ColorAnalyzer]
@@ -41,29 +43,31 @@ class DebugFrameDumper @Inject constructor(
      * No-op when the host application is not debuggable (i.e. release builds).
      * Best-effort: errors are swallowed.
      */
-    fun dump(bitmap: Bitmap, captured: CapturedColor, source: String) {
-        if (!isDebuggable()) return
-        val dir = File(context.getExternalFilesDir(null), DIR_NAME)
-        if (!dir.exists() && !dir.mkdirs()) return
-        val timestamp = isoTimestamp()
-        val base = "frame-$timestamp-$source"
-        val pngFile = File(dir, "$base.png")
-        val jsonFile = File(dir, "$base.json")
-        try {
-            FileOutputStream(pngFile).use { fos ->
-                bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+    suspend fun dump(bitmap: Bitmap, captured: CapturedColor, source: String) = withContext(Dispatchers.IO) {
+        if (isDebuggable()) {
+            val dir = File(context.getExternalFilesDir(null), DIR_NAME)
+            if (dir.exists() || dir.mkdirs()) {
+                val timestamp = isoTimestamp()
+                val base = "frame-$timestamp-$source"
+                val pngFile = File(dir, "$base.png")
+                val jsonFile = File(dir, "$base.json")
+                try {
+                    FileOutputStream(pngFile).use { fos ->
+                        bitmap.compress(Bitmap.CompressFormat.PNG, 100, fos)
+                    }
+                    jsonFile.writeText(
+                        buildSidecarJson(
+                            timestamp = timestamp,
+                            source = source,
+                            bitmapWidth = bitmap.width,
+                            bitmapHeight = bitmap.height,
+                            captured = captured,
+                        )
+                    )
+                } catch (_: Exception) {
+                    // best-effort: never break the capture path
+                }
             }
-            jsonFile.writeText(
-                buildSidecarJson(
-                    timestamp = timestamp,
-                    source = source,
-                    bitmapWidth = bitmap.width,
-                    bitmapHeight = bitmap.height,
-                    captured = captured,
-                )
-            )
-        } catch (_: Exception) {
-            // best-effort: never break the capture path
         }
     }
 

@@ -1,7 +1,9 @@
 package com.palettemuse.ui.capture
 
 import android.graphics.Bitmap
+import android.os.SystemClock
 import android.os.Trace
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -91,30 +93,33 @@ class CaptureViewModel @Inject constructor(
     fun capturePhoto(bitmap: Bitmap) {
         viewModelScope.launch {
             Trace.beginSection("capture.total")
+            val t0 = SystemClock.elapsedRealtime()
+            Log.i("CapturePerf", "shutter bitmap=${bitmap.width}x${bitmap.height}")
             _uiState.value = _uiState.value.copy(isAnalyzing = true)
-            val (imagePath, captured) = withContext(Dispatchers.Default) {
-                val saveJob = async(Dispatchers.IO) {
-                    traceSection("capture.save") { bitmapStorage.saveCapture(bitmap) }
-                }
-                val analyzeJob = async(Dispatchers.Default) {
-                    traceSection("capture.analyze") { colorAnalyzer.extractCapturedColor(bitmap) }
-                }
-                saveJob.await() to analyzeJob.await()
+            val saveJob = async(Dispatchers.IO) {
+                traceSection("capture.save") { bitmapStorage.saveCapture(bitmap) }
             }
+            val analyzeJob = async(Dispatchers.Default) {
+                traceSection("capture.analyze") { colorAnalyzer.extractCapturedColor(bitmap) }
+            }
+            val imagePath = saveJob.await()
+            val captured = analyzeJob.await()
+            Log.i("CapturePerf", "save+analyze done +${SystemClock.elapsedRealtime() - t0}ms")
             val matched = traceSection("capture.match") {
                 themeRepository.findMatchingTheme(captured.hex)
             }
+            Log.i("CapturePerf", "match done +${SystemClock.elapsedRealtime() - t0}ms")
             val isLowConfidence = captureConfidencePolicy.isLowConfidence(captured)
-            // Debug-only: dump the bitmap ColorAnalyzer actually saw, alongside
-            // the analyzer's verdict. Self-gated inside the dumper (no-op in
-            // release builds via ApplicationInfo.FLAG_DEBUGGABLE). See
-            // `docs/adr/0015-capture-debug-frame-dumper.md` and the dumper KDoc.
-            debugFrameDumper.dump(bitmap, captured, "shutter")
+            // Fire-and-forget: dump is debug-only, best-effort, and PNG-compress
+            // of the shutter bitmap (~1.3s on the Main thread) would otherwise
+            // delay the confirmation sheet. Detached child of viewModelScope so
+            // it is cancelled with the ViewModel and never escapes capture.
+            viewModelScope.launch(Dispatchers.IO) { debugFrameDumper.dump(bitmap, captured, "shutter") }
             _uiState.value = _uiState.value.copy(
                 isAnalyzing = false,
                 pendingCapture = PendingCapture(imagePath, captured.hex, matched, isLowConfidence)
             )
-            Trace.endSection()
+            Log.i("CapturePerf", "sheet shown +${SystemClock.elapsedRealtime() - t0}ms")
         }
     }
 
