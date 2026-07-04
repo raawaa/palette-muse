@@ -224,19 +224,26 @@ class PerceptualColorFamiliesTest {
     }
 
     /**
-     * The family's representative rgb is its highest-population member's
-     * centroid — deterministic and independent of input order. Two mergeable
-     * centroids with unequal populations: the family keeps the bigger one's rgb.
+     * The family's representative rgb is the population-weighted average of its
+     * member centroids (ADR-0021) — deterministic and independent of input
+     * order. Two mergeable centroids with unequal populations: the family's rgb
+     * is the weighted mean of their channels, NOT whichever member carried the
+     * most pixels. This is the regression guard for the bug where a color family
+     * that k-means split across near-duplicate centroids was represented by a
+     * single cluster that disagreed with the very family earning the confidence
+     * signal (see issue #41).
      */
     @Test
-    fun representativeIsHighestPopulationMember() {
+    fun representativeIsPopulationWeightedAverage() {
         val families = mergeSwatchesIntoPerceptualFamilies(
             listOf(ColorSwatch(0x9B9B9B, 70), ColorSwatch(0xA0A0A0, 130))
         )
         assertEquals(1, families.size)
+        // Per channel: (0x9B*70 + 0xA0*130) / 200 = (155*70 + 160*130) / 200
+        //             = 31650 / 200 = 158.25 → 0x9E
         assertEquals(
-            "representative must be the higher-population member's rgb",
-            0xA0A0A0,
+            "representative must be the population-weighted average rgb",
+            0x9E9E9E,
             families[0].rgb,
         )
         assertEquals(200, families[0].population)

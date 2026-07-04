@@ -35,7 +35,9 @@ _Avoid_: 拍照, shot (a capture carries color extraction and attribution; a
 plain photo does not).
 
 **Captured color (捕获色)**:
-The whole-photo dominant color of a single photo — the color measured at the
+The whole-photo dominant color of a single photo — the population-weighted
+centroid of the largest perceptual color family (the same family the confidence
+signals below are measured over — see ADR-0020 and ADR-0021), measured at the
 moment of capture and stored as that photo's attribute. It is what "a captured
 color" in match score refers to. When a photo joins an existing theme, its
 captured color is recorded as the photo's own and never overwrites that theme's

@@ -23,12 +23,20 @@ package com.palettemuse.core
  * downstream signal computation ([ColorAnalyzer]) treats families and raw
  * swatches with the same code.
  *
- * @property rgb        The family's representative centroid — its highest-
- *                      population member's [ColorSwatch.rgb]. Deterministic,
- *                      independent of input ordering. NOT used for `dominantHex`
- *                      selection, which stays on the raw top cluster per
- *                      ADR-0020 Out-of-Scope; this field only gives the family
- *                      a stable identity for testing.
+ * @property rgb        The family's representative centroid — the population-
+ *                      weighted average of its member centroids' RGB (ADR-0021),
+ *                      packed in the same `0xAARRGGBB` form as [ColorSwatch.rgb]
+ *                      (alpha high byte preserved from the members). A color
+ *                      family that k-means split across several near-duplicate
+ *                      centroids is represented by its perceptual center of
+ *                      mass rather than whichever single cluster happened to
+ *                      carry the most pixels. Deterministic and independent of
+ *                      input ordering: channel sums are order-free, and the
+ *                      alpha byte is identical across members of one family
+ *                      (they all originate from the same k-means pass). This
+ *                      field IS the captured `rgb` [ColorAnalyzer] returns —
+ *                      ADR-0020's "Out-of-Scope" on dominantHex was resolved by
+ *                      ADR-0021.
  * @property population Sum of the member centroids' pixel counts.
  */
 internal data class ColorFamily(val rgb: Int, val population: Int)
@@ -53,10 +61,11 @@ internal const val PERCEPTUAL_MERGE_DELTA_E: Double = 10.0
  * unioned into one family, and membership is transitive (if A≈B and B≈C then
  * A,B,C are one family even when A≉C — matching how a human calls a gradient
  * "one color"). Family [ColorFamily.population] is the sum of its members'
- * populations; [ColorFamily.rgb] is the highest-population member's centroid.
- * Returns families sorted by population descending, ties broken by rgb, so the
- * output is a pure deterministic function of the input set (independent of input
- * ordering or HashMap iteration).
+ * populations; [ColorFamily.rgb] is the population-weighted average of its
+ * member centroids' RGB (ADR-0021), so the family is represented by its
+ * perceptual center of mass. Returns families sorted by population descending,
+ * ties broken by rgb, so the output is a pure deterministic function of the
+ * input set (independent of input ordering or HashMap iteration).
  *
  * Contract:
  * - Returns an empty list when [swatches] is empty.
@@ -125,25 +134,42 @@ internal fun mergeSwatchesIntoPerceptualFamilies(
     }
 
     // Group members by root → one ColorFamily per root. Population is the sum;
-    // the representative is the highest-population member (ties → lowest index,
-    // which for k-means-sorted input is the higher-ranked centroid). Tracking
-    // the max explicitly keeps the representative independent of input order.
+    // the representative rgb is the population-weighted average of its member
+    // centroids (ADR-0021) — a color family that k-means split across several
+    // near-duplicate centroids is represented by its perceptual center of mass
+    // rather than whichever single cluster happened to carry the most pixels.
+    // Channel sums accumulate as Long (a full 96×96 = 9216-pixel family with
+    // 8-bit channels and Int populations stays well within Long range). The
+    // alpha high byte is taken from the lowest-index member (identical across
+    // members of one family — they share a k-means origin), so the packed
+    // `0xAARRGGBB` form matches [ColorSwatch.rgb]. Summation is order-free, so
+    // the result stays bit-for-bit deterministic regardless of input order.
     val familyPopulation = HashMap<Int, Int>()
-    val familyRepIndex = HashMap<Int, Int>()
-    val familyRepPopulation = HashMap<Int, Int>()
+    val familySumR = HashMap<Int, Long>()
+    val familySumG = HashMap<Int, Long>()
+    val familySumB = HashMap<Int, Long>()
+    val familyAlphaHigh = HashMap<Int, Int>()
     for (i in 0 until n) {
         val root = find(i)
-        familyPopulation[root] = (familyPopulation[root] ?: 0) + swatches[i].population
-        if (swatches[i].population > (familyRepPopulation[root] ?: -1)) {
-            familyRepIndex[root] = i
-            familyRepPopulation[root] = swatches[i].population
+        val swatch = swatches[i]
+        val pop = swatch.population
+        familyPopulation[root] = (familyPopulation[root] ?: 0) + pop
+        familySumR[root] = (familySumR[root] ?: 0L) + (((swatch.rgb shr 16) and 0xFF).toLong() * pop)
+        familySumG[root] = (familySumG[root] ?: 0L) + (((swatch.rgb shr 8) and 0xFF).toLong() * pop)
+        familySumB[root] = (familySumB[root] ?: 0L) + ((swatch.rgb and 0xFF).toLong() * pop)
+        if (root !in familyAlphaHigh) {
+            familyAlphaHigh[root] = swatch.rgb and (0xFF shl 24)
         }
     }
 
     return familyPopulation.keys.map { root ->
+        val pop = familyPopulation[root]!!
         ColorFamily(
-            rgb = swatches[familyRepIndex[root]!!].rgb,
-            population = familyPopulation[root]!!,
+            rgb = familyAlphaHigh[root]!! or
+                (((familySumR[root]!! / pop).toInt() and 0xFF) shl 16) or
+                (((familySumG[root]!! / pop).toInt() and 0xFF) shl 8) or
+                ((familySumB[root]!! / pop).toInt() and 0xFF),
+            population = pop,
         )
     }.sortedWith(
         // Highest population first; ties broken by lowest rgb so the order is

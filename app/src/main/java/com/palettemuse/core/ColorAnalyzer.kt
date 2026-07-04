@@ -17,9 +17,11 @@ class ColorAnalyzer @Inject constructor() {
      * This is the **single source of truth** for captured color — the value
      * used by both the viewfinder (`CaptureViewModel.onFrameAnalyzed`) and the
      * shutter path (`CaptureViewModel.capturePhoto`). The `.rgb` field is the
-     * whole-photo dominant — the top k-means cluster's centroid (24-bit
-     * `0xRRGGBB`), quantized from a 96×96 downscale (ADR-0001) via k-means
-     * (k=12). The hex string is available via `.hex` on [CapturedColor]. The two
+     * whole-photo dominant — the population-weighted centroid of the largest
+     * perceptual color family (24-bit `0xRRGGBB`), quantized from a 96×96
+     * downscale (ADR-0001) via k-means (k=12), then union-find merged by
+     * CIELAB ΔE < 10 (ADR-0020) with the family centroid selected per ADR-0021.
+     * The hex string is available via `.hex` on [CapturedColor]. The two
      * confidence
      * signals are measured over **perceptually-merged color families**
      * (ADR-0020): k-means centroids a human would call the same color (CIELAB
@@ -61,14 +63,21 @@ internal fun analyzePixels(pixels: IntArray): CapturedColor {
     val swatches = kMeansQuantize(pixels, k = TARGET_COLOR_COUNT)
     val families = mergeSwatchesIntoPerceptualFamilies(swatches)
     val totalPixels = swatches.sumOf { it.population }.coerceAtLeast(1)
-    val dominant = swatches.firstOrNull()
     val dominantFamily = families.firstOrNull()
     val populationShare = (dominantFamily?.population?.toDouble() ?: 0.0) / totalPixels
     val dominantPopulation = dominantFamily?.population
     val populationOfOthers = families.filter { it != dominantFamily }.map { it.population }
     val topVsSecondRatio = computeTopVsSecondRatio(dominantPopulation, populationOfOthers)
     return CapturedColor(
-        rgb = dominant?.rgb ?: 0x808080,
+        // ADR-0021: the captured rgb is the dominant family's weighted-average
+        // centroid, NOT the raw top k-means cluster. The raw top cluster can
+        // lose the population race inside a family (k-means splits a perceptually
+        // uniform color across several near-duplicate centroids) while still
+        // being the largest *single* cluster — yielding an rgb that disagrees
+        // with the very family that earned `populationShare`. Selecting the
+        // family centroid keeps the rgb and the confidence signal on the same
+        // granularity.
+        rgb = dominantFamily?.rgb ?: 0x808080,
         populationShare = populationShare,
         topVsSecondRatio = topVsSecondRatio,
     )
