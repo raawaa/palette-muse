@@ -5,6 +5,7 @@ import android.graphics.Color
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.palettemuse.core.CapturedColor
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -60,7 +61,7 @@ class DebugFrameDumperTest {
         )
         dir.listFiles()?.forEach { it.delete() }
 
-        dumper.dump(bmp, captured, "shutter")
+        runBlocking { dumper.dump(bmp, captured, "shutter") }
 
         assertTrue("dump dir should exist, was: ${dir.absolutePath}", dir.exists())
 
@@ -111,11 +112,13 @@ class DebugFrameDumperTest {
         // (other test runs may have left files), so we just assert the
         // call returns — the absence of a NEW file matching this
         // timestamp is implicit.
-        gated.dump(
-            bmp,
-            CapturedColor(hex = "#000000", populationShare = 1.0, topVsSecondRatio = 0.0),
-            "release-gate-test",
-        )
+        runBlocking {
+            gated.dump(
+                bmp,
+                CapturedColor(hex = "#000000", populationShare = 1.0, topVsSecondRatio = 0.0),
+                "release-gate-test",
+            )
+        }
         // No assertion of file absence — a too-broad check would race
         // with parallel runs. The contract is: the call is safe to make
         // from a release path, and that's verified by "did not throw".
