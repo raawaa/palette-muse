@@ -46,13 +46,23 @@ _Avoid_: 样本色, sample color.
 **Captured color confidence (捕获色置信度)**:
 A two-signal measure of how much the captured color stands for the photo's
 actual dominant, as opposed to being one of several substantial swatches.
-`populationShare` is the top Palette swatch's pixel count divided by the
-total pixel count; `topVsSecondRatio` is the top swatch's pixel count divided
-by the second-place swatch's. A photo is `isLowConfidence` when both are
+`populationShare` is the largest **perceptual color family's** pixel count
+divided by the total pixel count; `topVsSecondRatio` is that family's pixel
+count divided by the second-largest family's. A perceptual color family is the
+set of k-means clusters a human would call the same color (merged by CIELAB
+distance) — measuring share over raw single clusters systematically deflates
+the signal whenever a visually-uniform color varies slightly across pixels
+(glare, grain, gradient). A photo is `isLowConfidence` when both signals are
 below the `CaptureConfidencePolicy` thresholds; a low-confidence capture is
 still recorded but flagged to the user so they can override the pick or spin
-up a new theme. The current threshold values are set in the policy module
-and are calibration seeds — see ADR-0014.
+up a new theme. The current threshold values are set in the policy module and
+are calibration seeds — see ADR-0014 and ADR-0020.
+
+**Persistence**: on a confirmed photo, the two signals and the
+`isLowConfidence` verdict are stored alongside the photo so a low-confidence
+call can be audited after the fact (e.g. to find false-negatives where a
+clear dominant was flagged unclear). Read via `adb run-as` against the app's
+Room database; the audit is a debug-build developer workflow. See ADR-0019.
 _Avoid_: noise, error, variance, score.
 
 **Seed photo (种子照片)**:

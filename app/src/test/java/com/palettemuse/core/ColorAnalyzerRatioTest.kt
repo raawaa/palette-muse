@@ -44,7 +44,7 @@ class ColorAnalyzerRatioTest {
         // distinction the user-facing policy relies on.
         assertEquals(
             Double.POSITIVE_INFINITY,
-            computeTopVsSecondRatio(dominantPopulation = 9216, populationsOfOtherSwatches = emptyList()),
+            computeTopVsSecondRatio(dominantPopulation = 9216, populationsOfOthers = emptyList()),
             0.0001,
         )
     }
@@ -57,7 +57,7 @@ class ColorAnalyzerRatioTest {
         // comparison baseline.
         assertEquals(
             500.0 / 200.0,
-            computeTopVsSecondRatio(dominantPopulation = 500, populationsOfOtherSwatches = listOf(200)),
+            computeTopVsSecondRatio(dominantPopulation = 500, populationsOfOthers = listOf(200)),
             0.0001,
         )
     }
@@ -69,7 +69,7 @@ class ColorAnalyzerRatioTest {
         // population descending — we cannot assume that.)
         assertEquals(
             500.0 / 250.0, // not /150 — largest wins
-            computeTopVsSecondRatio(dominantPopulation = 500, populationsOfOtherSwatches = listOf(150, 250, 100)),
+            computeTopVsSecondRatio(dominantPopulation = 500, populationsOfOthers = listOf(150, 250, 100)),
             0.0001,
         )
     }
@@ -81,7 +81,7 @@ class ColorAnalyzerRatioTest {
         // way the second can't "compete", so the +Inf signal is correct.
         assertEquals(
             Double.POSITIVE_INFINITY,
-            computeTopVsSecondRatio(dominantPopulation = 100, populationsOfOtherSwatches = listOf(0, 0)),
+            computeTopVsSecondRatio(dominantPopulation = 100, populationsOfOthers = listOf(0, 0)),
             0.0001,
         )
     }
@@ -93,7 +93,7 @@ class ColorAnalyzerRatioTest {
         // low-confidence on the ratio signal — share still has to clear.
         val ratio = computeTopVsSecondRatio(
             dominantPopulation = 100,
-            populationsOfOtherSwatches = listOf(100),
+            populationsOfOthers = listOf(100),
         )
         assertEquals(1.0, ratio, 0.0001)
         assertTrue("ties are NOT strictly greater", ratio >= 1.0)

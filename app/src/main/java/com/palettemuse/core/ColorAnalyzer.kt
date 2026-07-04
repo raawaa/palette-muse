@@ -10,18 +10,25 @@ class ColorAnalyzer @Inject constructor() {
     /**
      * Returns the captured color of [bitmap] together with two confidence
      * signals derived from the same k-means quantization that picked the
-     * dominant — see `docs/adr/0014-captured-color-confidence-signal.md` and
-     * `docs/adr/0017-replace-palette-with-kmeans.md`.
+     * dominant — see `docs/adr/0014-captured-color-confidence-signal.md`,
+     * `docs/adr/0017-replace-palette-with-kmeans.md`, and
+     * `docs/adr/0020-population-share-over-perceptual-families.md`.
      *
      * This is the **single source of truth** for captured color — the value
      * used by both the viewfinder (`CaptureViewModel.onFrameAnalyzed`) and the
      * shutter path (`CaptureViewModel.capturePhoto`). The `.hex` field is the
-     * whole-photo dominant quantized from a 96×96 downscale (ADR-0001) via
-     * k-means (k=12). The two extra fields let [CaptureConfidencePolicy]
-     * decide whether the dominant actually stands for the photo or whether the
-     * UI should flag the capture as unclear.
+     * whole-photo dominant — the top k-means cluster's centroid, quantized from
+     * a 96×96 downscale (ADR-0001) via k-means (k=12). The two confidence
+     * signals are measured over **perceptually-merged color families**
+     * (ADR-0020): k-means centroids a human would call the same color (CIELAB
+     * ΔE < 10) are unioned into one family before `populationShare` and
+     * `topVsSecondRatio` are computed, so a visually-uniform color split across
+     * near-duplicate centroids is no longer structurally capped at ~1/k. The
+     * two fields let [CaptureConfidencePolicy] decide whether the dominant
+     * actually stands for the photo or whether the UI should flag it unclear.
      *
-     * Threading: k-means runs on the calling thread; each caller owns threading.
+     * Threading: k-means and the merge run on the calling thread; each caller
+     * owns threading.
      */
     fun extractCapturedColor(bitmap: Bitmap): CapturedColor {
         // Downscale to 96×96 first — matches ADR-0001's resolution-normalization
@@ -38,15 +45,26 @@ class ColorAnalyzer @Inject constructor() {
 
         val swatches = kMeansQuantize(pixels, k = TARGET_COLOR_COUNT)
 
+        // ADR-0020: measure the confidence signals over perceptually-merged
+        // color families, not raw k-means clusters. A visually-uniform color
+        // that k-means split across several near-duplicate centroids (glare,
+        // grain, JPEG noise) is unioned back into one family here, so its
+        // population share is no longer structurally capped at ~1/k ≈ 0.12.
+        // dominantHex selection is unchanged — still the raw top cluster's
+        // centroid (ADR-0020 Out-of-Scope).
+        val families = mergeSwatchesIntoPerceptualFamilies(swatches)
+
         val totalPixels = swatches.sumOf { it.population }.coerceAtLeast(1)
         val dominant = swatches.firstOrNull()
         val hex = dominant?.rgb?.toHex() ?: "#808080"
-        val populationShare = (dominant?.population?.toDouble() ?: 0.0) / totalPixels
+
+        val dominantFamily = families.firstOrNull()
+        val populationShare = (dominantFamily?.population?.toDouble() ?: 0.0) / totalPixels
 
         // Translate to primitive-population form so the ratio computation is
         // pure-Kotlin testable in the JVM source set (see below for the rule).
-        val dominantPopulation = dominant?.population
-        val populationOfOthers = swatches.filter { it !== dominant }.map { it.population }
+        val dominantPopulation = dominantFamily?.population
+        val populationOfOthers = families.filter { it != dominantFamily }.map { it.population }
         val topVsSecondRatio = computeTopVsSecondRatio(dominantPopulation, populationOfOthers)
 
         return CapturedColor(
@@ -67,11 +85,11 @@ class ColorAnalyzer @Inject constructor() {
 }
 
 /**
- * Computes the top-vs-second-swatch ratio from a k-means quantization, with
- * the same convention [ColorAnalyzer.extractCapturedColor] uses. Extracted
- * to a top-level `internal` function with primitive inputs so it is
- * pure-Kotlin JVM-testable without producing a real `Bitmap` /
- * `ColorSwatch` (per ADR-0002's top-level-fn testability pattern).
+ * Computes the top-vs-second ratio from a k-means quantization **after
+ * perceptual merge** (ADR-0020) — i.e. over merged color-family populations,
+ * not raw clusters. Extracted to a top-level `internal` function with
+ * primitive inputs so it is pure-Kotlin JVM-testable without producing a real
+ * `Bitmap` / `ColorSwatch` (per ADR-0002's top-level-fn testability pattern).
  *
  * Contract:
  * - Returns `0.0` when [dominantPopulation] is `null` (no swatches or no
@@ -86,18 +104,18 @@ class ColorAnalyzer @Inject constructor() {
  *
  * @param dominantPopulation `null` when there is no dominant swatch
  *   (k-means returned an empty list — e.g. all-transparent bitmaps).
- * @param populationsOfOtherSwatches populations of every swatch that is
- *   NOT the dominant, in descending order is not assumed. Empty when only
- *   the dominant exists.
+ * @param populationsOfOthers populations of every unit (raw k-means cluster or
+ *   merged perceptual family — ADR-0020) that is NOT the dominant, in any
+ *   order. Empty when only the dominant exists.
  */
 internal fun computeTopVsSecondRatio(
     dominantPopulation: Int?,
-    populationsOfOtherSwatches: List<Int>,
+    populationsOfOthers: List<Int>,
 ): Double {
     // No dominant → no comparison possible. Return 0.0 so the policy's
     // "both signals below threshold" arm fires and the capture is flagged
     // low-confidence (PR #19 RISK-review).
     val top = dominantPopulation ?: return 0.0
-    val second = populationsOfOtherSwatches.maxOrNull() ?: 0
+    val second = populationsOfOthers.maxOrNull() ?: 0
     return if (second <= 0) Double.POSITIVE_INFINITY else top.toDouble() / second.toDouble()
 }
