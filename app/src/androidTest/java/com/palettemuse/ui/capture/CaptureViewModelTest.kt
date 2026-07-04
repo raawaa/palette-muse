@@ -65,7 +65,7 @@ class CaptureViewModelTest {
     @Test
     fun confirmCapture_createsThemeWhenNoMatch() = runTest(dispatcher) {
         val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy(), debugFrameDumper)
-        vm.setPending(PendingCapture("/cap.jpg", "#DCA8A6", matchedTheme = null))
+        vm.setPending(PendingCapture("/cap.jpg", 0xDCA8A6, matchedTheme = null))
         vm.confirmCapture()
         advanceUntilIdle()
         assertEquals(1, db.themeDao().getAllThemes().first().size)
@@ -74,10 +74,10 @@ class CaptureViewModelTest {
 
     @Test
     fun confirmCapture_joinsThemeWhenMatched() = runTest(dispatcher) {
-        val seedId = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val matched = repo.findMatchingTheme("#DCB0A8")!!
+        val seedId = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        val matched = repo.findMatchingTheme(0xDCB0A8)!!
         val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy(), debugFrameDumper)
-        vm.setPending(PendingCapture("/cap.jpg", "#DCB0A8", matched))
+        vm.setPending(PendingCapture("/cap.jpg", 0xDCB0A8, matched))
         vm.confirmCapture()
         advanceUntilIdle()
         assertEquals(1, db.themeDao().getAllThemes().first().size)
@@ -86,10 +86,10 @@ class CaptureViewModelTest {
 
     @Test
     fun saveAsNewTheme_createsSeparateThemeEvenWhenMatched() = runTest(dispatcher) {
-        repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val matched = repo.findMatchingTheme("#DCB0A8")!!
+        repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        val matched = repo.findMatchingTheme(0xDCB0A8)!!
         val vm =         CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy(), debugFrameDumper)
-        vm.setPending(PendingCapture("/cap.jpg", "#DCB0A8", matched))
+        vm.setPending(PendingCapture("/cap.jpg", 0xDCB0A8, matched))
         vm.saveAsNewTheme()
         advanceUntilIdle()
         assertEquals(2, db.themeDao().getAllThemes().first().size)
@@ -98,7 +98,7 @@ class CaptureViewModelTest {
 
     @Test
     fun onFrameAnalyzed_picksClosestTheme() = runTest(dispatcher) {
-        repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
         val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy(), debugFrameDumper)
         advanceUntilIdle()  // drain init's themes collector before analyzing a frame
         // Same extractor as the shutter path: Palette quantizes a solid #DCA8A6 to
@@ -107,14 +107,14 @@ class CaptureViewModelTest {
         advanceUntilIdle()
         val target = vm.uiState.value.targetTheme
         // Theme name comes from ColorNamer.hash(#DCA8A6) — assert behaviour, not label.
-        assertEquals(ColorNamer().nameColor("#DCA8A6"), target.name)
+        assertEquals(ColorNamer().nameColor(0xDCA8A6), target.name)
         assertTrue(target.matchPct >= 60)
         assertFalse(target.isFallback)
     }
 
     @Test
     fun onFrameAnalyzed_fallbackIsHonestWhenNoMatch() = runTest(dispatcher) {
-        repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
         val vm = CaptureViewModel(repo, ColorAnalyzer(), storage, ThemeMatcher(ColorMatcher()), CaptureConfidencePolicy(), debugFrameDumper)
         advanceUntilIdle()  // drain init's themes collector before analyzing a frame
         vm.onFrameAnalyzed(solidBitmap("#00FF00"))  // 亮绿 vs Dusty Rose → 大 ΔE → fallback
@@ -153,7 +153,7 @@ class CaptureViewModelTest {
     fun setPending_lowConfidenceFlag_roundTripsThroughUiState() {
         val policy = CaptureConfidencePolicy()
         val captured = com.palettemuse.core.CapturedColor(
-            hex = "#3C8C5A",
+            rgb = 0x3C8C5A,
             populationShare = 0.30,
             topVsSecondRatio = 1.10,
         )
@@ -165,7 +165,7 @@ class CaptureViewModelTest {
         vm.setPending(
             PendingCapture(
                 imagePath = "/cap.jpg",
-                dominantHex = captured.hex,
+                dominantRgb = captured.rgb,
                 matchedTheme = null,
                 isLowConfidence = policy.isLowConfidence(captured),
             )

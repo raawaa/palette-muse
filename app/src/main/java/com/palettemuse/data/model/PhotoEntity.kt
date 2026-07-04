@@ -20,7 +20,7 @@ data class PhotoEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val themeId: String,
     val imagePath: String,
-    val dominantHex: String,
+    val dominantRgb: Int,
     val isSeed: Boolean = false,
     val capturedAt: Long = System.currentTimeMillis(),
     /**
@@ -34,4 +34,6 @@ data class PhotoEntity(
     val populationShare: Double? = null,
     val topVsSecondRatio: Double? = null,
     val isLowConfidence: Boolean? = null
-)
+) {
+    val dominantHex: String get() = "#%06X".format(dominantRgb and 0xFFFFFF)
+}

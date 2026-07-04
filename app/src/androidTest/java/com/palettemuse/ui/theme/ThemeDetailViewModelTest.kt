@@ -47,8 +47,8 @@ class ThemeDetailViewModelTest {
     @After fun tearDown() { db.close(); Dispatchers.resetMain() }
 
     @Test fun loadsThemeWithPhotos() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        repo.savePhotoToTheme(id, "/cap1.jpg", "#C99A92")
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        repo.savePhotoToTheme(id, "/cap1.jpg", 0xC99A92)
         val vm = ThemeDetailViewModel(Routes.ThemeDetail(id), repo)
         advanceUntilIdle()
         val state = vm.uiState.first { !it.isLoading }
@@ -66,7 +66,7 @@ class ThemeDetailViewModelTest {
     }
 
     @Test fun renameTheme_updatesState() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
         val vm = ThemeDetailViewModel(Routes.ThemeDetail(id), repo)
         advanceUntilIdle()
         vm.renameTheme("新主题名")
@@ -76,7 +76,7 @@ class ThemeDetailViewModelTest {
     }
 
     @Test fun deleteTheme_clearsState() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
         val vm = ThemeDetailViewModel(Routes.ThemeDetail(id), repo)
         advanceUntilIdle()
         vm.deleteTheme()

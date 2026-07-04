@@ -33,7 +33,7 @@ class CaptureConfirmSheetTest {
     fun lowConfidenceTrue_showsHintText() {
         val pending = PendingCapture(
             imagePath = "/tmp/test.jpg",
-            dominantHex = "#AABBCC",
+            dominantRgb = 0xAABBCC,
             matchedTheme = null,
             isLowConfidence = true,
         )
@@ -54,7 +54,7 @@ class CaptureConfirmSheetTest {
     fun lowConfidenceFalse_hidesHintText() {
         val pending = PendingCapture(
             imagePath = "/tmp/test.jpg",
-            dominantHex = "#AABBCC",
+            dominantRgb = 0xAABBCC,
             matchedTheme = null,
             isLowConfidence = false,
         )

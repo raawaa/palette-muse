@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.palettemuse.core.PosterRenderer
@@ -128,7 +127,7 @@ class ExportViewModel @AssistedInject constructor(
             data.photos.take(count).map { loadBitmap(it.imagePath) }
         }
         val photos = bitmaps.filterNotNull()
-        val primary = parseHexOrGray(data.theme.representativeHex)
+        val primary = data.theme.representativeRgb
         val config = PosterRenderer.PosterConfig(
             title = data.theme.name.ifBlank { "Moodboard Color Harmony" },
             subtitle = "curated with Palette Muse",
@@ -150,18 +149,12 @@ class ExportViewModel @AssistedInject constructor(
         null
     }
 
-    private fun parseHexOrGray(hex: String): Int = try {
-        Color.parseColor(hex)
-    } catch (e: Exception) {
-        Color.GRAY
-    }
-
     /** Returns [base] with its luminance nudged by [factor] (0.0 = black, 1.0 = white). */
     private fun shadeOf(base: Int, factor: Float): Int {
-        val r = (Color.red(base) * factor).toInt().coerceIn(0, 255)
-        val g = (Color.green(base) * factor).toInt().coerceIn(0, 255)
-        val b = (Color.blue(base) * factor).toInt().coerceIn(0, 255)
-        return Color.rgb(r, g, b)
+        val r = (((base shr 16) and 0xFF) * factor).toInt().coerceIn(0, 255)
+        val g = (((base shr 8) and 0xFF) * factor).toInt().coerceIn(0, 255)
+        val b = ((base and 0xFF) * factor).toInt().coerceIn(0, 255)
+        return (r shl 16) or (g shl 8) or b
     }
 
     /** Clears the one-shot save-success flag after the host has shown confirmation. */

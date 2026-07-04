@@ -58,9 +58,9 @@ class ExportViewModelTest {
     @After fun tearDown() { db.close(); Dispatchers.resetMain() }
 
     @Test fun loadsTheme_selectsUpToFourPhotos_rendersPoster() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        repo.savePhotoToTheme(id, "/cap1.jpg", "#C99A92")
-        repo.savePhotoToTheme(id, "/cap2.jpg", "#B98A82")
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        repo.savePhotoToTheme(id, "/cap1.jpg", 0xC99A92)
+        repo.savePhotoToTheme(id, "/cap2.jpg", 0xB98A82)
 
         val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
@@ -83,8 +83,8 @@ class ExportViewModelTest {
     }
 
     @Test fun selectedPhotos_cappedAtFour() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        repeat(6) { i -> repo.savePhotoToTheme(id, "/cap$i.jpg", "#C99A92") }
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        repeat(6) { i -> repo.savePhotoToTheme(id, "/cap$i.jpg", 0xC99A92) }
 
         val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
@@ -95,8 +95,8 @@ class ExportViewModelTest {
     // ---- New Plan 3 tests: 4-template selection ----
 
     @Test fun selectTemplate_grid_updatesState() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        repeat(5) { i -> repo.savePhotoToTheme(id, "/p$i.jpg", "#DCA8A6") }
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        repeat(5) { i -> repo.savePhotoToTheme(id, "/p$i.jpg", 0xDCA8A6) }
         val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
         vm.selectTemplate(PosterRenderer.TemplateType.GRID)
@@ -105,8 +105,8 @@ class ExportViewModelTest {
     }
 
     @Test fun selectTemplate_minimal_updatesState() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        repeat(5) { i -> repo.savePhotoToTheme(id, "/p$i.jpg", "#DCA8A6") }
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        repeat(5) { i -> repo.savePhotoToTheme(id, "/p$i.jpg", 0xDCA8A6) }
         val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
         vm.selectTemplate(PosterRenderer.TemplateType.MINIMAL)
@@ -116,7 +116,7 @@ class ExportViewModelTest {
 
     @Test
     fun sharePoster_generatesTemporaryFile() = runTest(dispatcher) {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
         val vm = ExportViewModel(Routes.Export(id), repo, renderer, exporter)
         advanceUntilIdle()
         val bmp = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)

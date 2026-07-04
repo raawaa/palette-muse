@@ -16,9 +16,11 @@ class ColorAnalyzer @Inject constructor() {
      *
      * This is the **single source of truth** for captured color — the value
      * used by both the viewfinder (`CaptureViewModel.onFrameAnalyzed`) and the
-     * shutter path (`CaptureViewModel.capturePhoto`). The `.hex` field is the
-     * whole-photo dominant — the top k-means cluster's centroid, quantized from
-     * a 96×96 downscale (ADR-0001) via k-means (k=12). The two confidence
+     * shutter path (`CaptureViewModel.capturePhoto`). The `.rgb` field is the
+     * whole-photo dominant — the top k-means cluster's centroid (24-bit
+     * `0xRRGGBB`), quantized from a 96×96 downscale (ADR-0001) via k-means
+     * (k=12). The hex string is available via `.hex` on [CapturedColor]. The two
+     * confidence
      * signals are measured over **perceptually-merged color families**
      * (ADR-0020): k-means centroids a human would call the same color (CIELAB
      * ΔE < 10) are unioned into one family before `populationShare` and
@@ -60,14 +62,13 @@ internal fun analyzePixels(pixels: IntArray): CapturedColor {
     val families = mergeSwatchesIntoPerceptualFamilies(swatches)
     val totalPixels = swatches.sumOf { it.population }.coerceAtLeast(1)
     val dominant = swatches.firstOrNull()
-    val hex = dominant?.rgb?.toHex() ?: "#808080"
     val dominantFamily = families.firstOrNull()
     val populationShare = (dominantFamily?.population?.toDouble() ?: 0.0) / totalPixels
     val dominantPopulation = dominantFamily?.population
     val populationOfOthers = families.filter { it != dominantFamily }.map { it.population }
     val topVsSecondRatio = computeTopVsSecondRatio(dominantPopulation, populationOfOthers)
     return CapturedColor(
-        hex = hex,
+        rgb = dominant?.rgb ?: 0x808080,
         populationShare = populationShare,
         topVsSecondRatio = topVsSecondRatio,
     )

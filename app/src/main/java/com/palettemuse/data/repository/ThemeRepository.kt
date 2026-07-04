@@ -26,20 +26,20 @@ class ThemeRepository @Inject constructor(
     private val themeMatcher: ThemeMatcher,
     private val themeFactory: ThemeFactory
 ) {
-    suspend fun findMatchingTheme(hex: String): ThemeEntity? =
-        themeMatcher.bestMatch(themeDao.getAllThemes().first(), hex)?.theme
+    suspend fun findMatchingTheme(rgb: Int): ThemeEntity? =
+        themeMatcher.bestMatch(themeDao.getAllThemes().first(), rgb)?.theme
 
     suspend fun savePhotoToTheme(
         themeId: String,
         imagePath: String,
-        dominantHex: String,
+        dominantRgb: Int,
         populationShare: Double? = null,
         topVsSecondRatio: Double? = null,
         isLowConfidence: Boolean? = null
     ) {
         photoDao.insert(
             themeFactory.createCapture(
-                themeId, dominantHex, imagePath,
+                themeId, dominantRgb, imagePath,
                 populationShare, topVsSecondRatio, isLowConfidence
             )
         )
@@ -48,14 +48,14 @@ class ThemeRepository @Inject constructor(
 
     suspend fun createThemeAndSave(
         imagePath: String,
-        dominantHex: String,
+        dominantRgb: Int,
         populationShare: Double? = null,
         topVsSecondRatio: Double? = null,
         isLowConfidence: Boolean? = null
     ): String {
-        val name = colorNamer.nameColor(dominantHex)
+        val name = colorNamer.nameColor(dominantRgb)
         val (theme, photo) = themeFactory.createSeed(
-            name, dominantHex, imagePath,
+            name, dominantRgb, imagePath,
             populationShare, topVsSecondRatio, isLowConfidence
         )
         themeDao.insert(theme)
@@ -93,8 +93,8 @@ class ThemeRepository @Inject constructor(
         themeDao.rename(id, name, System.currentTimeMillis())
     }
 
-    suspend fun updateThemeColor(id: String, newHex: String) {
-        themeDao.updateColor(id, newHex, System.currentTimeMillis())
+    suspend fun updateThemeColor(id: String, newRgb: Int) {
+        themeDao.updateColor(id, newRgb, System.currentTimeMillis())
     }
 
     suspend fun deleteTheme(id: String) = themeDao.deleteById(id)

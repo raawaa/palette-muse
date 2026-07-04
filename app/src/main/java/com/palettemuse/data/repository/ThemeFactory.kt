@@ -8,7 +8,7 @@ import javax.inject.Inject
 class ThemeFactory @Inject constructor() {
     fun createSeed(
         name: String,
-        dominantHex: String,
+        dominantRgb: Int,
         imagePath: String,
         populationShare: Double? = null,
         topVsSecondRatio: Double? = null,
@@ -18,13 +18,13 @@ class ThemeFactory @Inject constructor() {
         val theme = ThemeEntity(
             id = themeId,
             name = name,
-            representativeHex = dominantHex
+            representativeRgb = dominantRgb
         )
         val photo = PhotoEntity(
             id = UUID.randomUUID().toString(),
             themeId = themeId,
             imagePath = imagePath,
-            dominantHex = dominantHex,
+            dominantRgb = dominantRgb,
             isSeed = true,
             populationShare = populationShare,
             topVsSecondRatio = topVsSecondRatio,
@@ -35,7 +35,7 @@ class ThemeFactory @Inject constructor() {
 
     fun createCapture(
         themeId: String,
-        dominantHex: String,
+        dominantRgb: Int,
         imagePath: String,
         populationShare: Double? = null,
         topVsSecondRatio: Double? = null,
@@ -45,7 +45,7 @@ class ThemeFactory @Inject constructor() {
             id = UUID.randomUUID().toString(),
             themeId = themeId,
             imagePath = imagePath,
-            dominantHex = dominantHex,
+            dominantRgb = dominantRgb,
             isSeed = false,
             populationShare = populationShare,
             topVsSecondRatio = topVsSecondRatio,

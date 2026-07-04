@@ -17,8 +17,8 @@ import javax.inject.Singleton
  *    because a DB read on every frame is too slow.
  *
  * Post-ADR-0001 both callers feed the **same** sample color — the Palette-quantized
- * dominant hex from [com.palettemuse.core.ColorAnalyzer.extractCapturedColor] (its
- * `.hex` field), so the rule genuinely lives in one place. See
+ * dominant from [com.palettemuse.core.ColorAnalyzer.extractCapturedColor] (its
+ * `.rgb` field, 24-bit `0xRRGGBB`), so the rule genuinely lives in one place. See
  * `docs/adr/0003-themematcher-stays-class-threshold-private.md` for why this stays a
  * class with a private threshold.
  *
@@ -33,12 +33,12 @@ class ThemeMatcher @Inject constructor(
     data class ScoredTheme(val theme: ThemeEntity, val score: Int)
 
     /**
-     * Picks the best-matching theme for [sampleHex]. Themes scoring below
+     * Picks the best-matching theme for [sampleRgb]. Themes scoring below
      * [MATCH_THRESHOLD] are excluded; on a tie the earliest theme in [themes] wins.
      */
-    fun bestMatch(themes: List<ThemeEntity>, sampleHex: String): ScoredTheme? =
+    fun bestMatch(themes: List<ThemeEntity>, sampleRgb: Int): ScoredTheme? =
         themes
-            .map { ScoredTheme(it, colorMatcher.matchPercentage(it.representativeHex, sampleHex)) }
+            .map { ScoredTheme(it, colorMatcher.matchPercentage(it.representativeRgb, sampleRgb)) }
             .filter { it.score >= MATCH_THRESHOLD }
             .maxByOrNull { it.score }
 

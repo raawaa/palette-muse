@@ -20,8 +20,8 @@ import org.junit.Test
  */
 class ViewfinderSmootherTest {
 
-    private fun theme(id: String, name: String, hex: String) =
-        ThemeEntity(id = id, name = name, representativeHex = hex)
+    private fun theme(id: String, name: String, rgb: Int) =
+        ThemeEntity(id = id, name = name, representativeRgb = rgb)
 
     private fun match(theme: ThemeEntity, score: Int) =
         ThemeMatcher.ScoredTheme(theme, score)
@@ -30,7 +30,7 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_steadySceneIsStable() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
+        val rose = theme("a", "Rose", 0xDCA8A6)
         val outputs = (1..30).map { s.smooth(match(rose, 85)) }
         // Never falls back while a theme is being asserted
         assertTrue(outputs.all { !it.isFallback && it.name == "Rose" })
@@ -46,7 +46,7 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_jitteringRawScoreIsDamped() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
+        val rose = theme("a", "Rose", 0xDCA8A6)
         // Raw scores alternate +/-10 around mean 80
         val noisy = listOf(80, 70, 90, 68, 92, 71, 89, 70, 90, 72, 88, 70, 90, 71, 89, 70, 90, 71, 89, 70)
         val outputs = noisy.map { s.smooth(match(rose, it)) }
@@ -62,8 +62,8 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_themeNameDoesNotFlicker() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
-        val green = theme("b", "Green", "#00FF00")
+        val rose = theme("a", "Rose", 0xDCA8A6)
+        val green = theme("b", "Green", 0x00FF00)
         // Establish Rose first (first-frame acceptance)
         val first = s.smooth(match(rose, 80))
         assertEquals("Rose", first.name)
@@ -83,8 +83,8 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_switchesAfterConsecutiveFrames() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
-        val green = theme("b", "Green", "#00FF00")
+        val rose = theme("a", "Rose", 0xDCA8A6)
+        val green = theme("b", "Green", 0x00FF00)
         // Establish Rose
         s.smooth(match(rose, 80))
         // Three consecutive Green wins
@@ -98,7 +98,7 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_dropsToFallbackAfterConsecutiveNoMatch() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
+        val rose = theme("a", "Rose", 0xDCA8A6)
         s.smooth(match(rose, 80))
         s.smooth(null) // pending 1
         s.smooth(null) // pending 2 -- still Rose
@@ -114,7 +114,7 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_fallbackDoesNotFlickerOnMarginalMatch() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
+        val rose = theme("a", "Rose", 0xDCA8A6)
         // Start in fallback (no themes ever asserted)
         s.smooth(null)
         // Marginal wins separated by nulls -- neither side accumulates 3 consecutive frames
@@ -140,8 +140,8 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_followsRealColorChange() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
-        val green = theme("b", "Green", "#00FF00")
+        val rose = theme("a", "Rose", 0xDCA8A6)
+        val green = theme("b", "Green", 0x00FF00)
         // Warm up on Rose
         repeat(10) { s.smooth(match(rose, 80)) }
         // Scene changes to Green -- held steady for 15 frames ( ~500ms @30fps)
@@ -154,7 +154,7 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_firstFrameMatchIsAccepted() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
+        val rose = theme("a", "Rose", 0xDCA8A6)
         val out = s.smooth(match(rose, 80))
         assertEquals("Rose", out.name)
         assertFalse(out.isFallback)
@@ -165,8 +165,8 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_emaDoesNotMixAcrossThemes() {
         val s = ViewfinderSmoother(confirmFrames = 2)
-        val rose = theme("a", "Rose", "#DCA8A6")
-        val green = theme("b", "Green", "#00FF00")
+        val rose = theme("a", "Rose", 0xDCA8A6)
+        val green = theme("b", "Green", 0x00FF00)
         // Warm up on Rose at 80
         repeat(20) { s.smooth(match(rose, 80)) }
         // Switch to Green
@@ -185,7 +185,7 @@ class ViewfinderSmootherTest {
     @Test
     fun smooth_targetStateCarriesItsOwnScore() {
         val s = ViewfinderSmoother()
-        val rose = theme("a", "Rose", "#DCA8A6")
+        val rose = theme("a", "Rose", 0xDCA8A6)
         val out = s.smooth(match(rose, 80))
         assertNotEquals(0, out.matchPct)
         assertTrue(out.matchPct in 1..100)

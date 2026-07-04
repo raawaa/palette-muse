@@ -90,5 +90,5 @@ class CaptureConfidencePolicyTest {
     }
 
     private fun captured(share: Double, ratio: Double) =
-        CapturedColor(hex = "#000000", populationShare = share, topVsSecondRatio = ratio)
+        CapturedColor(rgb = 0x000000, populationShare = share, topVsSecondRatio = ratio)
 }

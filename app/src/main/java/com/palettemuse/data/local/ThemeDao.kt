@@ -25,8 +25,8 @@ interface ThemeDao {
     @Query("UPDATE themes SET name = :name, updatedAt = :updatedAt WHERE id = :id")
     suspend fun rename(id: String, name: String, updatedAt: Long)
 
-    @Query("UPDATE themes SET representativeHex = :hex, updatedAt = :updatedAt WHERE id = :id")
-    suspend fun updateColor(id: String, hex: String, updatedAt: Long)
+    @Query("UPDATE themes SET representativeRgb = :rgb, updatedAt = :updatedAt WHERE id = :id")
+    suspend fun updateColor(id: String, rgb: Int, updatedAt: Long)
 
     @Query("DELETE FROM themes WHERE id = :id")
     suspend fun deleteById(id: String)

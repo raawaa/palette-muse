@@ -28,7 +28,7 @@ data class TargetState(val name: String, val matchPct: Int, val isFallback: Bool
 
 data class PendingCapture(
     val imagePath: String,
-    val dominantHex: String,
+    val dominantRgb: Int,
     val matchedTheme: ThemeEntity?,
     /**
      * Per ADR-0014 / issue #17: `true` when [CaptureConfidencePolicy] flagged
@@ -87,8 +87,7 @@ class CaptureViewModel @Inject constructor(
     fun onFrameAnalyzed(bitmap: Bitmap) {
         if (_themes.value.isEmpty()) return // 等待 themes 缓存就绪 (首帧 themes 可能未加载)
         val captured = colorAnalyzer.extractCapturedColor(bitmap)
-        val sampleHex = captured.hex
-        val best = themeMatcher.bestMatch(_themes.value, sampleHex)
+        val best = themeMatcher.bestMatch(_themes.value, captured.rgb)
         // Display-layer smoothing only: capturePhoto() below still uses the
         // raw score for the real shutter decision.
         val target = viewfinderSmoother.smooth(best)
@@ -114,7 +113,7 @@ class CaptureViewModel @Inject constructor(
             val captured = analyzeJob.await()
             Log.i("CapturePerf", "save+analyze done +${SystemClock.elapsedRealtime() - t0}ms")
             val matched = traceSection("capture.match") {
-                themeRepository.findMatchingTheme(captured.hex)
+                themeRepository.findMatchingTheme(captured.rgb)
             }
             Log.i("CapturePerf", "match done +${SystemClock.elapsedRealtime() - t0}ms")
             val isLowConfidence = captureConfidencePolicy.isLowConfidence(captured)
@@ -126,7 +125,7 @@ class CaptureViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 isAnalyzing = false,
                 pendingCapture = PendingCapture(
-                    imagePath, captured.hex, matched, isLowConfidence,
+                    imagePath, captured.rgb, matched, isLowConfidence,
                     captured.populationShare, captured.topVsSecondRatio
                 )
             )
@@ -153,12 +152,12 @@ class CaptureViewModel @Inject constructor(
             val matched = pending.matchedTheme
             if (matched != null) {
                 themeRepository.savePhotoToTheme(
-                    matched.id, pending.imagePath, pending.dominantHex,
+                    matched.id, pending.imagePath, pending.dominantRgb,
                     pending.populationShare, pending.topVsSecondRatio, pending.isLowConfidence
                 )
             } else {
                 themeRepository.createThemeAndSave(
-                    pending.imagePath, pending.dominantHex,
+                    pending.imagePath, pending.dominantRgb,
                     pending.populationShare, pending.topVsSecondRatio, pending.isLowConfidence
                 )
             }
@@ -170,7 +169,7 @@ class CaptureViewModel @Inject constructor(
         val pending = _uiState.value.pendingCapture ?: return
         viewModelScope.launch {
             themeRepository.createThemeAndSave(
-                pending.imagePath, pending.dominantHex,
+                pending.imagePath, pending.dominantRgb,
                 pending.populationShare, pending.topVsSecondRatio, pending.isLowConfidence
             )
             _uiState.value = _uiState.value.copy(pendingCapture = null)

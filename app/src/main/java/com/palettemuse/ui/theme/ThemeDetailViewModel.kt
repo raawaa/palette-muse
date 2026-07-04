@@ -88,13 +88,21 @@ class ThemeDetailViewModel @AssistedInject constructor(
 
     /** Updates the theme's representative color (the color shown as the theme's identity dot) and refreshes. */
     fun updateThemeColor(hex: String) {
+        // The EditColorDialog passes hex strings from the UI; convert to Int rgb here
+        val rgb = parseHexToRgb(hex)
         viewModelScope.launch {
-            runCatching { themeRepository.updateThemeColor(themeId, hex) }
+            runCatching { themeRepository.updateThemeColor(themeId, rgb) }
                 .onSuccess { reload() }
                 .onFailure { err ->
                     _uiState.value = _uiState.value.copy(error = err.message ?: "更新颜色失败")
                 }
         }
+    }
+
+    /** Converts a hex color string (e.g. "#FF0000" or "FF0000") to a 24-bit Int RGB. */
+    private fun parseHexToRgb(hex: String): Int {
+        val s = if (hex.startsWith("#")) hex.drop(1) else hex
+        return s.take(6).toIntOrNull(16) ?: 0x808080
     }
 
     /** Deletes the theme; host should observe [ThemeDetailUiState.isDeleted] and pop. */

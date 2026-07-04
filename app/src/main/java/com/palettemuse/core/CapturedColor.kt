@@ -7,11 +7,12 @@ package com.palettemuse.core
  * confidence-signal.md` for why both signals are surfaced rather than only a
  * pre-baked `isLowConfidence` boolean.
  *
- * @property hex            `#RRGGBB` quantized dominant of the photo — the top
+ * @property rgb            24-bit `0xRRGGBB` quantized dominant — the top
  *                          k-means cluster's centroid (ADR-0017). Always set;
- *                          falls back to `"#808080"` only when k-means produces
+ *                          falls back to `0x808080` only when k-means produces
  *                          no swatch at all. The single source of truth for
- *                          captured color (ADR-0001).
+ *                          captured color (ADR-0001). The hex string is
+ *                          available via the [hex] computed property.
  * @property populationShare Largest **perceptual color family's** pixel count /
  *                          total pixel count, in [0.0, 1.0]. A family is the
  *                          union of k-means centroids a human would call the
@@ -24,7 +25,9 @@ package com.palettemuse.core
  *                          family clearly beat the runner-up".
  */
 data class CapturedColor(
-    val hex: String,
+    val rgb: Int,
     val populationShare: Double,
     val topVsSecondRatio: Double,
-)
+) {
+    val hex: String get() = "#%06X".format(rgb and 0xFFFFFF)
+}

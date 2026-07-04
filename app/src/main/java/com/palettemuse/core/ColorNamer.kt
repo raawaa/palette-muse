@@ -32,9 +32,11 @@ class ColorNamer @Inject constructor() {
         "Shadow", "Bloom", "Petal", "Ash", "Smoke", "Cloud", "Slate"
     )
 
-    fun nameColor(hexColor: String): String {
-        val rgb = parseHexRgb(hexColor)
-        val hsv = hsvFromRgb(rgb.r, rgb.g, rgb.b)
+    fun nameColor(rgb: Int): String {
+        val r = (rgb shr 16) and 0xFF
+        val g = (rgb shr 8) and 0xFF
+        val b = rgb and 0xFF
+        val hsv = hsvFromRgb(r, g, b)
 
         val hueName = hueRanges.first { hsv.hue in it.start..it.end }.name
         val moodList = moodWords[hueName] ?: moodWords.values.flatten()

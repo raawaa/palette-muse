@@ -98,7 +98,7 @@ class PerceptualColorFamiliesTest {
         val second = families[1].population
         val ratio = computeTopVsSecondRatio(dominant.population, listOf(second))
         val verdict = CaptureConfidencePolicy().isLowConfidence(
-            CapturedColor(hex = "#A0A0A0", populationShare = dominantShare, topVsSecondRatio = ratio)
+            CapturedColor(rgb = 0xA0A0A0, populationShare = dominantShare, topVsSecondRatio = ratio)
         )
         assertTrue("capture must NOT be low-confidence after merge", verdict.not())
     }

@@ -33,7 +33,7 @@ class DebugFrameDumperTest {
         // reads these exact keys. Any field-name change here is a
         // coordination break with the script — keep the keys stable.
         val captured = CapturedColor(
-            hex = "#B6AA9C",
+            rgb = 0xB6AA9C,
             populationShare = 0.188,
             topVsSecondRatio = 1.21,
         )
@@ -61,7 +61,7 @@ class DebugFrameDumperTest {
             source = "shutter",
             bitmapWidth = 1,
             bitmapHeight = 1,
-            captured = CapturedColor(hex = "#000000", populationShare = 1.0, topVsSecondRatio = 0.0),
+            captured = CapturedColor(rgb = 0x000000, populationShare = 1.0, topVsSecondRatio = 0.0),
         )
         assertTrue("hex must appear literally, was: $json", json.contains("\"topHex\":\"#000000\""))
     }
@@ -81,7 +81,7 @@ class DebugFrameDumperTest {
             bitmapWidth = 1,
             bitmapHeight = 1,
             captured = CapturedColor(
-                hex = "#DCA8A6",
+                rgb = 0xDCA8A6,
                 populationShare = 1.0,
                 topVsSecondRatio = Double.POSITIVE_INFINITY,
             ),

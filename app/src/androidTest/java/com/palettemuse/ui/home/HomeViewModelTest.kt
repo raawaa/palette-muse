@@ -54,7 +54,7 @@ class HomeViewModelTest {
     }
 
     @Test fun themesLoaded_intoState() = runTest(dispatcher) {
-        repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
         val vm = HomeViewModel(repo)
         advanceUntilIdle()
         val state = vm.uiState.first()

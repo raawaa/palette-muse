@@ -2,11 +2,11 @@
   "formatVersion": 1,
   "database": {
     "version": 4,
-    "identityHash": "fb0a13732035c39b01b8f662731ee4dd",
+    "identityHash": "99a52ddde5d0d431cec917b23f0b5dc1",
     "entities": [
       {
         "tableName": "themes",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `representativeHex` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `name` TEXT NOT NULL, `representativeRgb` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
         "fields": [
           {
             "fieldPath": "id",
@@ -21,9 +21,9 @@
             "notNull": true
           },
           {
-            "fieldPath": "representativeHex",
-            "columnName": "representativeHex",
-            "affinity": "TEXT",
+            "fieldPath": "representativeRgb",
+            "columnName": "representativeRgb",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -48,7 +48,7 @@
       },
       {
         "tableName": "photos",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `themeId` TEXT NOT NULL, `imagePath` TEXT NOT NULL, `dominantHex` TEXT NOT NULL, `isSeed` INTEGER NOT NULL, `capturedAt` INTEGER NOT NULL, `populationShare` REAL, `topVsSecondRatio` REAL, `isLowConfidence` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`themeId`) REFERENCES `themes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `themeId` TEXT NOT NULL, `imagePath` TEXT NOT NULL, `dominantRgb` INTEGER NOT NULL, `isSeed` INTEGER NOT NULL, `capturedAt` INTEGER NOT NULL, `populationShare` REAL, `topVsSecondRatio` REAL, `isLowConfidence` INTEGER, PRIMARY KEY(`id`), FOREIGN KEY(`themeId`) REFERENCES `themes`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -69,9 +69,9 @@
             "notNull": true
           },
           {
-            "fieldPath": "dominantHex",
-            "columnName": "dominantHex",
-            "affinity": "TEXT",
+            "fieldPath": "dominantRgb",
+            "columnName": "dominantRgb",
+            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -136,7 +136,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'fb0a13732035c39b01b8f662731ee4dd')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '99a52ddde5d0d431cec917b23f0b5dc1')"
     ]
   }
 }

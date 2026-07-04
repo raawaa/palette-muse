@@ -35,7 +35,7 @@ class ThemeRepositoryTest {
 
     @Test
     fun createThemeAndSave_createsSeedPhoto() = runTest {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
         val themes = db.themeDao().getAllThemes().first()
         assertEquals(1, themes.size)
         assertEquals(id, themes[0].id)
@@ -46,23 +46,23 @@ class ThemeRepositoryTest {
 
     @Test
     fun findMatchingTheme_returnsMatchAboveThreshold() = runTest {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val matched = repo.findMatchingTheme("#DCB0A8") // 接近的枯玫瑰
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        val matched = repo.findMatchingTheme(0xDCB0A8) // 接近的枯玫瑰
         assertEquals(id, matched?.id)
     }
 
     @Test
     fun findMatchingTheme_returnsNullBelowThreshold() = runTest {
-        repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        val matched = repo.findMatchingTheme("#00FF00") // 差异大的亮绿
+        repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        val matched = repo.findMatchingTheme(0x00FF00) // 差异大的亮绿
         assertNull(matched)
     }
 
     @Test
     fun savePhotoToTheme_appendsPhoto() = runTest {
-        val id = repo.createThemeAndSave("/seed.jpg", "#DCA8A6")
-        repo.savePhotoToTheme(id, "/cap1.jpg", "#DCA8A6")
-        repo.savePhotoToTheme(id, "/cap2.jpg", "#D5A09A")
+        val id = repo.createThemeAndSave("/seed.jpg", 0xDCA8A6)
+        repo.savePhotoToTheme(id, "/cap1.jpg", 0xDCA8A6)
+        repo.savePhotoToTheme(id, "/cap2.jpg", 0xD5A09A)
         assertEquals(3, db.photoDao().getPhotosForThemeOnce(id).size)
     }
 }

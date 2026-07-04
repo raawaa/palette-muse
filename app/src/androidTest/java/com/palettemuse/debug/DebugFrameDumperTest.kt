@@ -46,7 +46,7 @@ class DebugFrameDumperTest {
             eraseColor(Color.parseColor("#B6AA9C"))
         }
         val captured = CapturedColor(
-            hex = "#B6AA9C",
+            rgb = 0xB6AA9C,
             populationShare = 0.188,
             topVsSecondRatio = 1.21,
         )
@@ -115,7 +115,7 @@ class DebugFrameDumperTest {
         runBlocking {
             gated.dump(
                 bmp,
-                CapturedColor(hex = "#000000", populationShare = 1.0, topVsSecondRatio = 0.0),
+                CapturedColor(rgb = 0x000000, populationShare = 1.0, topVsSecondRatio = 0.0),
                 "release-gate-test",
             )
         }
