@@ -29,7 +29,7 @@ class HomeViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             themeRepository.getAllThemesWithPhotos().collect { themes ->
-                _uiState.value = HomeUiState(themes = themes, isLoading = false)
+                _uiState.value = _uiState.value.copy(themes = themes, isLoading = false)
             }
         }
     }
