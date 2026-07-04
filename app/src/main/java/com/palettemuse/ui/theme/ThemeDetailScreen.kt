@@ -54,6 +54,8 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -176,6 +178,10 @@ private fun ThemeDetailContent(
     var showColor by remember { mutableStateOf(false) }
     var deleteConfirmPhotoId by remember { mutableStateOf<String?>(null) }
 
+    // Measure toolbar height dynamically instead of hardcoding clearance.
+    val density = LocalDensity.current
+    var toolbarHeight by remember { mutableStateOf(0.dp) }
+
     // Snackbar for rename / recolor feedback and error messages.
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -201,7 +207,7 @@ private fun ThemeDetailContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 88.dp, bottom = Dimens.stackMd), // top clearance for TopAppBar
+                        .padding(top = toolbarHeight, bottom = Dimens.stackMd), // dynamic clearance for overlay toolbar
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Representative color dot
@@ -262,6 +268,9 @@ private fun ThemeDetailContent(
                 .fillMaxWidth()
                   .background(Color.White)
                   .statusBarsPadding()
+                  .onGloballyPositioned { coordinates ->
+                      toolbarHeight = with(density) { coordinates.size.height.toDp() }
+                  }
                   .padding(horizontal = Dimens.containerMargin, vertical = Dimens.stackMd),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically
