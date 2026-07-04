@@ -208,7 +208,7 @@ private fun ThemeDetailContent(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = toolbarHeight, bottom = Dimens.stackMd), // dynamic clearance for overlay toolbar
+                        .padding(top = toolbarHeight + Dimens.stackSm, bottom = Dimens.stackMd), // clearance + gap for overlay toolbar
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Representative color dot
@@ -268,10 +268,10 @@ private fun ThemeDetailContent(
             modifier = Modifier
                 .fillMaxWidth()
                   .background(Color.White)
-                  .statusBarsPadding()
                   .onGloballyPositioned { coordinates ->
                       toolbarHeight = with(density) { coordinates.size.height.toDp() }
                   }
+                  .statusBarsPadding()
                   .padding(horizontal = Dimens.containerMargin, vertical = Dimens.stackMd),
               horizontalArrangement = Arrangement.SpaceBetween,
               verticalAlignment = Alignment.CenterVertically
