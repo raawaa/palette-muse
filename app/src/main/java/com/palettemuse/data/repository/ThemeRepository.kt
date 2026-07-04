@@ -24,7 +24,8 @@ class ThemeRepository @Inject constructor(
     private val photoDao: PhotoDao,
     private val colorNamer: ColorNamer,
     private val themeMatcher: ThemeMatcher,
-    private val themeFactory: ThemeFactory
+    private val themeFactory: ThemeFactory,
+    private val bitmapStorage: BitmapStorage
 ) {
     suspend fun findMatchingTheme(rgb: Int): ThemeEntity? =
         themeMatcher.bestMatch(themeDao.getAllThemes().first(), rgb)?.theme
@@ -98,6 +99,13 @@ class ThemeRepository @Inject constructor(
     }
 
     suspend fun deleteTheme(id: String) = themeDao.deleteById(id)
+
+    suspend fun deletePhoto(photoId: String) {
+        // Load the photo first to get its file path
+        val photo = photoDao.getPhotoById(photoId) ?: return
+        photoDao.deleteById(photoId)
+        bitmapStorage.deleteCapture(photo.imagePath)
+    }
 
     private suspend fun touchTheme(themeId: String) {
         themeDao.getTheme(themeId)?.let {

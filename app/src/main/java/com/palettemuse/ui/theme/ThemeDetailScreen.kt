@@ -1,8 +1,10 @@
 package com.palettemuse.ui.theme
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Star
@@ -138,6 +141,7 @@ fun ThemeDetailScreen(
                     onRename = viewModel::renameTheme,
                     onUpdateColor = viewModel::updateThemeColor,
                     onDelete = viewModel::deleteTheme,
+                    onDeletePhoto = viewModel::deletePhoto,
                     onBack = onBack
                 )
             }
@@ -157,6 +161,7 @@ private fun ThemeDetailContent(
     onRename: (String) -> Unit,
     onUpdateColor: (String) -> Unit,
     onDelete: () -> Unit,
+    onDeletePhoto: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val theme = state.theme
@@ -169,6 +174,7 @@ private fun ThemeDetailContent(
     var menuExpanded by remember { mutableStateOf(false) }
     var showRename by remember { mutableStateOf(false) }
     var showColor by remember { mutableStateOf(false) }
+    var deleteConfirmPhotoId by remember { mutableStateOf<String?>(null) }
 
     // Snackbar for rename / recolor feedback and error messages.
     val snackbarHostState = remember { SnackbarHostState() }
@@ -243,7 +249,10 @@ private fun ThemeDetailContent(
                 items = gridPhotos,
                 key = { it.id }
             ) { photo ->
-                CaptureCard(photo = photo)
+                CaptureCard(
+                    photo = photo,
+                    onDelete = { deleteConfirmPhotoId = photo.id }
+                )
             }
         }
 
@@ -335,6 +344,28 @@ private fun ThemeDetailContent(
         )
     }
 
+    // ===== Photo delete confirmation dialog =====
+    deleteConfirmPhotoId?.let { photoId ->
+        AlertDialog(
+            onDismissRequest = { deleteConfirmPhotoId = null },
+            title = { Text("删除照片") },
+            text = { Text("确定要删除这张照片吗？") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeletePhoto(photoId)
+                        deleteConfirmPhotoId = null
+                    }
+                ) { Text("删除", color = RoseGold) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteConfirmPhotoId = null }) {
+                    Text("取消")
+                }
+            }
+        )
+    }
+
     // ===== Rename / recolor dialogs (replace Plan 2 final-fix snackbar placeholders) =====
     if (showRename) {
         RenameDialog(
@@ -413,8 +444,12 @@ private fun HeroOrigin(photo: PhotoEntity) {
 // Capture Card — masonry grid item (AsyncImage + rounded corner)
 // ===================================================================
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun CaptureCard(photo: PhotoEntity) {
+private fun CaptureCard(
+    photo: PhotoEntity,
+    onDelete: () -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -426,6 +461,10 @@ private fun CaptureCard(photo: PhotoEntity) {
             )
             .clip(RoundedCornerShape(Dimens.imageCorner))
             .background(OutlineVariant)
+            .combinedClickable(
+                onClick = { /* no-op, just an image */ },
+                onLongClick = onDelete
+            )
     ) {
         if (!photo.imagePath.isBlank()) {
             AsyncImage(

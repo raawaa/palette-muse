@@ -117,4 +117,14 @@ class ThemeDetailViewModel @AssistedInject constructor(
                 }
         }
     }
+
+    fun deletePhoto(photoId: String) {
+        viewModelScope.launch {
+            runCatching { themeRepository.deletePhoto(photoId) }
+                .onSuccess { reload() }
+                .onFailure { err ->
+                    _uiState.value = _uiState.value.copy(error = err.message ?: "删除照片失败")
+                }
+        }
+    }
 }
