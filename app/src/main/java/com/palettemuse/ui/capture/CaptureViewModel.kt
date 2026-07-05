@@ -28,13 +28,16 @@ import kotlinx.coroutines.launch
 
 /**
  * Post-shutter extraction animation mode.
- * - [NONE]: no animation (before shutter or after animation completes).
+ * - [NONE]: no animation (before shutter or after the reveal completes).
+ * - [SCANNING]: inference in progress — a neutral radar-pulse plays to cover
+ *   mask+color-analysis latency. Set within one frame of the shutter press;
+ *   transitions to SUBJECT_LOCKED or FALLBACK when results are known.
  * - [SUBJECT_LOCKED]: a subject mask was applied — highlight the subject
  *   region and bloom the color from it.
  * - [FALLBACK]: no mask was available — a whole-frame color bloom without
  *   subject highlight.
  */
-enum class ExtractionMode { NONE, SUBJECT_LOCKED, FALLBACK }
+enum class ExtractionMode { NONE, SCANNING, SUBJECT_LOCKED, FALLBACK }
 
 data class TargetState(val name: String, val matchPct: Int, val isFallback: Boolean)
 
@@ -135,6 +138,10 @@ class CaptureViewModel @Inject constructor(
             val t0 = SystemClock.elapsedRealtime()
             Log.i("CapturePerf", "shutter bitmap=${bitmap.width}x${bitmap.height}")
             _uiState.value = _uiState.value.copy(isAnalyzing = true)
+            // SCANNING starts within one frame of the shutter press (this launch
+            // runs on Main.immediate), covering mask+analyze latency. The UI
+            // transitions to SUBJECT_LOCKED/FALLBACK once results land (#54).
+            _uiState.value = _uiState.value.copy(extractionMode = ExtractionMode.SCANNING)
             val saveJob = async(Dispatchers.IO) {
                 traceSection("capture.save") { bitmapStorage.saveCapture(bitmap) }
             }
