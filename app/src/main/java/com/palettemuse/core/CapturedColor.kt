@@ -1,11 +1,14 @@
 package com.palettemuse.core
 
 /**
- * A whole-photo captured color and the signals that say how much it stands for
- * the photo's actual dominant. Built by [ColorAnalyzer.extractCapturedColor] and
- * consumed by [CaptureConfidencePolicy]; see `docs/adr/0014-captured-color-
- * confidence-signal.md` for why both signals are surfaced rather than only a
- * pre-baked `isLowConfidence` boolean.
+ * A captured color and the signals that say how much it stands for the photo's
+ * actual dominant. Built by [ColorAnalyzer.extractCapturedColor] and consumed
+ * by [CaptureConfidencePolicy]; see `docs/adr/0014-captured-color-confidence-
+ * signal.md` for why both signals are surfaced rather than only a pre-baked
+ * `isLowConfidence` boolean.
+ *
+ * When a subject mask was applied, the confidence signals are measured over
+ * the subject region only.
  *
  * @property rgb            24-bit `0xRRGGBB` quantized dominant — the top
  *                          k-means cluster's centroid (ADR-0017). Always set;
@@ -23,11 +26,16 @@ package com.palettemuse.core
  *                          `Double.POSITIVE_INFINITY` when only one family
  *                          exists (single-color bitmap). Answers "does the top
  *                          family clearly beat the runner-up".
+ * @property maskCoverage   Fraction of pixels covered by the subject mask,
+ *                          always in (0.0, 1.0] when the mask was applied.
+ *                          `null` when no subject mask was used (pre-saliency
+ *                          captures and null-mask fallbacks).
  */
 data class CapturedColor(
     val rgb: Int,
     val populationShare: Double,
     val topVsSecondRatio: Double,
+    val maskCoverage: Double? = null,
 ) {
     val hex: String get() = "#%06X".format(rgb and 0xFFFFFF)
 }

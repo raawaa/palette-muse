@@ -33,7 +33,16 @@ data class PhotoEntity(
      */
     val populationShare: Double? = null,
     val topVsSecondRatio: Double? = null,
-    val isLowConfidence: Boolean? = null
+    val isLowConfidence: Boolean? = null,
+
+    /**
+     * Subject-mask coverage fraction — the fraction of the downscaled pixel
+     * area covered by the subject mask at capture time. `null` when no mask
+     * was applied (pre-saliency captures and null-mask fallbacks). Added in
+     * ADR-0024 / MIGRATION_5_6. Existing rows from earlier migrations keep
+     * `maskCoverage IS NULL`.
+     */
+    val maskCoverage: Double? = null
 ) {
     val dominantHex: String get() = "#%06X".format(dominantRgb and 0xFFFFFF)
 }

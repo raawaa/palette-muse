@@ -10,10 +10,14 @@ import javax.inject.Singleton
  * to depend on this class (or vice-versa), coupling two unrelated concerns. See
  * `docs/adr/0014-captured-color-confidence-signal.md`.
  *
- * A capture is low-confidence only when **both** [CapturedColor.populationShare]
- * is below [MIN_POPULATION_SHARE] **and** [CapturedColor.topVsSecondRatio] is
- * below [MIN_TOP_VS_SECOND_RATIO]. Either signal alone is not enough:
+ * A capture is low-confidence when **either**:
+ * - Both [CapturedColor.populationShare] and [CapturedColor.topVsSecondRatio]
+ *   are strictly below their respective thresholds (the classic two-signal test).
+ * - The subject [CapturedColor.maskCoverage] is outside the degeneracy band
+ *   defined by [MIN_MASK_COVERAGE] and [MAX_MASK_COVERAGE] (mask is too small
+ *   or too large to carry a meaningful subject signal).
  *
+ * The two classic signals alone:
  * - High share + low ratio means the photo is dominated by one large color,
  *   with another large secondary color nearby (e.g. grass 50% + sky 35%) — the
  *   user can pick the dominant and find the day's mood; not low-confidence.
@@ -28,13 +32,20 @@ import javax.inject.Singleton
 class CaptureConfidencePolicy @Inject constructor() {
 
     /**
-     * @return `true` when both [CapturedColor.populationShare] and
-     *   [CapturedColor.topVsSecondRatio] are strictly below their respective
-     *   thresholds.
+     * @return `true` when the capture is low-confidence by the share-ratio
+     *   test or the mask-coverage degeneracy test.
      */
-    fun isLowConfidence(c: CapturedColor): Boolean =
-        c.populationShare < MIN_POPULATION_SHARE &&
+    fun isLowConfidence(c: CapturedColor): Boolean {
+        // Degeneracy arm: a mask that covers almost nothing or almost
+        // everything cannot carry a meaningful subject signal.
+        val mc = c.maskCoverage
+        if (mc != null && (mc < MIN_MASK_COVERAGE || mc > MAX_MASK_COVERAGE)) {
+            return true
+        }
+        // Classic two-signal test: both must be below threshold.
+        return c.populationShare < MIN_POPULATION_SHARE &&
             c.topVsSecondRatio < MIN_TOP_VS_SECOND_RATIO
+    }
 
     private companion object {
         // Calibration seeds, not product commitments: see ADR-0014
@@ -48,5 +59,14 @@ class CaptureConfidencePolicy @Inject constructor() {
 
         /** Below this top-vs-second ratio, the dominant does not clearly beat the runner-up. */
         const val MIN_TOP_VS_SECOND_RATIO = 1.5
+
+        /**
+         * Mask-coverage degeneracy thresholds. A subject mask covering less
+         * than [MIN_MASK_COVERAGE] or more than [MAX_MASK_COVERAGE] of the
+         * pixel area is considered degenerate — it cannot carry a meaningful
+         * subject signal and the capture should be flagged low-confidence.
+         */
+        const val MIN_MASK_COVERAGE = 0.05
+        const val MAX_MASK_COVERAGE = 0.95
     }
 }

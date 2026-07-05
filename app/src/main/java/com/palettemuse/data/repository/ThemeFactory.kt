@@ -12,7 +12,8 @@ class ThemeFactory @Inject constructor() {
         imagePath: String,
         populationShare: Double? = null,
         topVsSecondRatio: Double? = null,
-        isLowConfidence: Boolean? = null
+        isLowConfidence: Boolean? = null,
+        maskCoverage: Double? = null
     ): Pair<ThemeEntity, PhotoEntity> {
         val themeId = UUID.randomUUID().toString()
         val theme = ThemeEntity(
@@ -28,7 +29,8 @@ class ThemeFactory @Inject constructor() {
             isSeed = true,
             populationShare = populationShare,
             topVsSecondRatio = topVsSecondRatio,
-            isLowConfidence = isLowConfidence
+            isLowConfidence = isLowConfidence,
+            maskCoverage = maskCoverage
         )
         return Pair(theme, photo)
     }
@@ -39,7 +41,8 @@ class ThemeFactory @Inject constructor() {
         imagePath: String,
         populationShare: Double? = null,
         topVsSecondRatio: Double? = null,
-        isLowConfidence: Boolean? = null
+        isLowConfidence: Boolean? = null,
+        maskCoverage: Double? = null
     ): PhotoEntity {
         return PhotoEntity(
             id = UUID.randomUUID().toString(),
@@ -49,7 +52,8 @@ class ThemeFactory @Inject constructor() {
             isSeed = false,
             populationShare = populationShare,
             topVsSecondRatio = topVsSecondRatio,
-            isLowConfidence = isLowConfidence
+            isLowConfidence = isLowConfidence,
+            maskCoverage = maskCoverage
         )
     }
 }

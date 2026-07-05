@@ -1,5 +1,6 @@
 # ADR 0017: Replace `androidx.palette` with pure-Kotlin k-means quantization
 
+- **Amended by:** ADR-0024 (2026-07-05). The cross-device bit-determinism guarantee is downgraded to **same-device run-determinism**, because the salient-subject mask runs on NNAPI (vendor drivers vary across devices) and this is a single-user app where cross-device equality is not load-bearing. k-means itself remains `seed=42L` bit-deterministic given identical input. See ADR-0024 §4.
 - **Status:** Accepted
 - **Date:** 2026-07-03
 - **Related:** Issue #17, ADR-0001, ADR-0014, ADR-0015, ADR-0016

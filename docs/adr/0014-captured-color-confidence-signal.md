@@ -1,5 +1,6 @@
 # ADR 0014: Captured color carries a confidence signal (population share + top-vs-second ratio)
 
+- **Amended by:** ADR-0024 (2026-07-05). When saliency locks a subject, `populationShare` and `topVsSecondRatio` are measured over the **subject region** (not the whole photo), and a third signal `maskCoverage` (mask area fraction) is added to flag degenerate masks. The `(0.40, 1.5)` thresholds become calibration seeds pending re-tuning. See ADR-0024 §2.
 - **Status:** Accepted
 - **Date:** 2026-07-01
 - **Related:** Issue #17, ADR-0001
