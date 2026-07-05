@@ -10,31 +10,26 @@ class ColorAnalyzer @Inject constructor() {
     /**
      * Returns the captured color of [bitmap] together with two confidence
      * signals derived from the same k-means quantization that picked the
-     * dominant — see `docs/adr/0014-captured-color-confidence-signal.md`,
-     * `docs/adr/0017-replace-palette-with-kmeans.md`, and
-     * `docs/adr/0020-population-share-over-perceptual-families.md`.
+     * dominant. When a subject [mask] is provided (aligned 1:1 with the
+     * downscaled pixel array), k-means runs only on masked pixels so the
+     * captured color is computed from the subject region. A null mask
+     * preserves the whole-photo behavior (today's default).
      *
      * This is the **single source of truth** for captured color — the value
      * used by both the viewfinder (`CaptureViewModel.onFrameAnalyzed`) and the
      * shutter path (`CaptureViewModel.capturePhoto`). The `.rgb` field is the
-     * whole-photo dominant — the population-weighted centroid of the largest
-     * perceptual color family (24-bit `0xRRGGBB`), quantized from a 96×96
-     * downscale (ADR-0001) via k-means (k=12), then union-find merged by
-     * CIELAB ΔE < 10 (ADR-0020) with the family centroid selected per ADR-0021.
-     * The hex string is available via `.hex` on [CapturedColor]. The two
-     * confidence
-     * signals are measured over **perceptually-merged color families**
-     * (ADR-0020): k-means centroids a human would call the same color (CIELAB
-     * ΔE < 10) are unioned into one family before `populationShare` and
-     * `topVsSecondRatio` are computed, so a visually-uniform color split across
-     * near-duplicate centroids is no longer structurally capped at ~1/k. The
-     * two fields let [CaptureConfidencePolicy] decide whether the dominant
-     * actually stands for the photo or whether the UI should flag it unclear.
+     * whole-photo or subject-region dominant — the population-weighted centroid
+     * of the largest perceptual color family (24-bit `0xRRGGBB`), quantized
+     * from a 96×96 downscale via k-means (k=12), then union-find merged by
+     * CIELAB ΔE < 10. See `docs/adr/0014-captured-color-confidence-signal.md`,
+     * `docs/adr/0017-replace-palette-with-kmeans.md`, and
+     * `docs/adr/0020-population-share-over-perceptual-families.md`.
      *
-     * Threading: k-means and the merge run on the calling thread; each caller
-     * owns threading.
+     * @param mask  Optional subject-mask aligned 1:1 with the downscaled
+     *   pixel array. When non-null, only pixels whose mask entry is `true`
+     *   enter k-means quantization. Null preserves whole-photo behavior.
      */
-    fun extractCapturedColor(bitmap: Bitmap): CapturedColor {
+    fun extractCapturedColor(bitmap: Bitmap, mask: BooleanArray? = null): CapturedColor {
         // Downscale to 96×96 first — matches ADR-0001's resolution-normalization
         // invariant (viewfinder 640×480 and shutter full-res both enter the
         // quantizer at the same 9,216-pixel scale). The pre-k-means sample
@@ -46,21 +41,31 @@ class ColorAnalyzer @Inject constructor() {
         }
         val pixels = IntArray(DOWNSCALE_SIZE * DOWNSCALE_SIZE)
         downscaled.getPixels(pixels, 0, DOWNSCALE_SIZE, 0, 0, DOWNSCALE_SIZE, DOWNSCALE_SIZE)
-        return analyzePixels(pixels)
-    }
-
-    private companion object {
-        const val DOWNSCALE_SIZE = 96
+        return analyzePixels(pixels, mask)
     }
 }
 
+/** Pipeline working resolution: captured bitmaps are downscaled to this size. */
+internal const val DOWNSCALE_SIZE = 96
+
 /**
  * Pure-Kotlin orchestration: pixel array → CapturedColor.
- * JVM unit tests can construct an IntArray and call this directly
- * — no Bitmap, no Android dependency.
+ * When [mask] is non-null, only pixels whose mask entry is `true` are
+ * quantized, so the captured color is extracted from the subject region.
+ * Null mask preserves whole-photo behavior.
+ *
+ * JVM unit tests can construct an IntArray and BooleanArray and call
+ * this directly — no Bitmap, no Android dependency.
+ *
+ * @param mask  Optional mask aligned 1:1 with [pixels]. `true` = subject pixel,
+ *   `false` = background (excluded from quantization). When non-null and
+ *   non-empty, k-means runs only on the masked pixels; if the mask filters
+ *   out every pixel, the pipeline falls back to whole-photo to never block
+ *   a capture.
  */
-internal fun analyzePixels(pixels: IntArray): CapturedColor {
-    val swatches = kMeansQuantize(pixels, k = TARGET_COLOR_COUNT)
+internal fun analyzePixels(pixels: IntArray, mask: BooleanArray? = null): CapturedColor {
+    val effectivePixels = if (mask != null) filterByMask(pixels, mask) else pixels
+    val swatches = kMeansQuantize(effectivePixels, k = TARGET_COLOR_COUNT)
     val families = mergeSwatchesIntoPerceptualFamilies(swatches)
     val totalPixels = swatches.sumOf { it.population }.coerceAtLeast(1)
     val dominantFamily = families.firstOrNull()
@@ -127,4 +132,23 @@ internal fun computeTopVsSecondRatio(
     val top = dominantPopulation ?: return 0.0
     val second = populationsOfOthers.maxOrNull() ?: 0
     return if (second <= 0) Double.POSITIVE_INFINITY else top.toDouble() / second.toDouble()
+}
+
+/**
+ * Filters [pixels] to only those positions where [mask] is `true`.
+ * Returns a new IntArray containing the masked pixels in original order.
+ * Used when a subject-mask is provided so k-means runs only on the
+ * subject region.
+ */
+internal fun filterByMask(pixels: IntArray, mask: BooleanArray): IntArray {
+    var count = 0
+    for (b in mask) if (b) count++
+    val result = IntArray(count)
+    var idx = 0
+    for (i in pixels.indices) {
+        if (mask[i]) {
+            result[idx++] = pixels[i]
+        }
+    }
+    return result
 }
