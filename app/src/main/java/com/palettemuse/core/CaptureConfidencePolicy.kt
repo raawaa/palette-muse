@@ -47,6 +47,15 @@ class CaptureConfidencePolicy @Inject constructor() {
             c.topVsSecondRatio < MIN_TOP_VS_SECOND_RATIO
     }
 
+    /**
+     * Returns `true` when [coverage] is outside the valid mask-coverage band
+     * (degenerate — too small or too large to carry a subject signal). Used by
+     * the capture path to decide whether to apply a mask or fall back to
+     * whole-photo. Thresholds are calibration seeds (ADR-0024).
+     */
+    fun isMaskCoverageDegenerate(coverage: Double): Boolean =
+        coverage < MIN_MASK_COVERAGE || coverage > MAX_MASK_COVERAGE
+
     private companion object {
         // Calibration seeds, not product commitments: see ADR-0014
         // (calibration corpus), and the future ADR-0015 tune that will replace

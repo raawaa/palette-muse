@@ -59,9 +59,10 @@ internal const val DOWNSCALE_SIZE = 96
  *
  * @param mask  Optional mask aligned 1:1 with [pixels]. `true` = subject pixel,
  *   `false` = background (excluded from quantization). When non-null and
- *   non-empty, k-means runs only on the masked pixels; if the mask filters
- *   out every pixel, the pipeline falls back to whole-photo to never block
- *   a capture.
+ *   non-empty, k-means runs only on the masked pixels; if the mask filters out
+ *   every pixel, k-means gets an empty input and the function returns a gray
+ *   fallback (0x808080) — the caller's degeneracy guard prevents this path in
+ *   production (see CaptureConfidencePolicy's mask-coverage band).
  */
 internal fun analyzePixels(pixels: IntArray, mask: BooleanArray? = null): CapturedColor {
     val effectivePixels = if (mask != null) filterByMask(pixels, mask) else pixels

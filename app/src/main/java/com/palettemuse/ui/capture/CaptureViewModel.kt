@@ -160,7 +160,7 @@ class CaptureViewModel @Inject constructor(
             val (effectiveMask, maskCoverage) = if (mask != null) {
                 val total = DOWNSCALE_SIZE * DOWNSCALE_SIZE
                 val coverage = mask.count { it }.toDouble() / total
-                if (coverage in 0.05..0.95) mask to coverage else null to null
+                if (!captureConfidencePolicy.isMaskCoverageDegenerate(coverage)) mask to coverage else null to null
             } else {
                 null to null
             }
