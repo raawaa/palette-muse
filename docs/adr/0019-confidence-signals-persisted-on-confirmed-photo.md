@@ -1,5 +1,6 @@
 # ADR 0019: Confidence signals persisted on the confirmed photo
 
+- **Amended by:** ADR-0024 (2026-07-05). A nullable `maskCoverage: Double?` column is added (MIGRATION_5_6). Rows with `maskCoverage IS NULL` are pre-saliency (full-image signal semantics); non-null rows carry mask-internal semantics. Old rows are NOT recomputed. Future calibration queries should filter `WHERE maskCoverage IS NOT NULL`. See ADR-0024 §3.
 - **Status:** Accepted
 - **Date:** 2026-07-04
 - **Related:** ADR-0014, ADR-0015, ADR-0017, ADR-0018, Issue #17

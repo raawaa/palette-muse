@@ -20,6 +20,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -54,6 +55,22 @@ class HomeViewModelTest {
         advanceUntilIdle()
         val state = vm.uiState.first()
         assertTrue(state.themes.isEmpty())
+    }
+
+    @Test fun delete_keeps_isDeleting_true() = runTest(dispatcher) {
+        repo.createThemeAndSave("/seed1.jpg", 0xDCA8A6)
+        repo.createThemeAndSave("/seed2.jpg", 0x800080)
+        val vm = HomeViewModel(repo)
+        advanceUntilIdle()
+        vm.enterDeleteMode()
+        assertTrue("Should be in delete mode", vm.uiState.first().isDeleting)
+        // Delete one theme
+        val themeId = vm.uiState.first().themes[0].theme.id
+        vm.deleteTheme(themeId)
+        advanceUntilIdle()
+        // After deletion, isDeleting should still be true
+        assertTrue("isDeleting should remain true after delete", vm.uiState.first().isDeleting)
+        assertEquals("Second theme should still be present", 1, vm.uiState.first().themes.size)
     }
 
     @Test fun themesLoaded_intoState() = runTest(dispatcher) {

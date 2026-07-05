@@ -36,12 +36,13 @@ class ThemeRepository @Inject constructor(
         dominantRgb: Int,
         populationShare: Double? = null,
         topVsSecondRatio: Double? = null,
-        isLowConfidence: Boolean? = null
+        isLowConfidence: Boolean? = null,
+        maskCoverage: Double? = null
     ) {
         photoDao.insert(
             themeFactory.createCapture(
                 themeId, dominantRgb, imagePath,
-                populationShare, topVsSecondRatio, isLowConfidence
+                populationShare, topVsSecondRatio, isLowConfidence, maskCoverage
             )
         )
         touchTheme(themeId)
@@ -52,12 +53,13 @@ class ThemeRepository @Inject constructor(
         dominantRgb: Int,
         populationShare: Double? = null,
         topVsSecondRatio: Double? = null,
-        isLowConfidence: Boolean? = null
+        isLowConfidence: Boolean? = null,
+        maskCoverage: Double? = null
     ): String {
         val name = colorNamer.nameColor(dominantRgb)
         val (theme, photo) = themeFactory.createSeed(
             name, dominantRgb, imagePath,
-            populationShare, topVsSecondRatio, isLowConfidence
+            populationShare, topVsSecondRatio, isLowConfidence, maskCoverage
         )
         themeDao.insert(theme)
         photoDao.insert(photo)

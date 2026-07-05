@@ -12,7 +12,7 @@ import com.palettemuse.data.model.ThemeEntity
         ThemeEntity::class,
         PhotoEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -34,34 +34,84 @@ abstract class AppDatabase : RoomDatabase() {
         // the hex columns are preserved as computed properties.
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
+                // Add new Int RGB columns alongside old hex columns
                 db.execSQL("ALTER TABLE `themes` ADD COLUMN `representativeRgb` INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE `photos` ADD COLUMN `dominantRgb` INTEGER NOT NULL DEFAULT 0")
 
                 // Backfill themes.representativeRgb from existing representativeHex values.
-                // SQLite cannot natively parse hex strings, so we use a cursor to do it in Kotlin.
-                db.query("SELECT id, representativeHex FROM themes").use { cursor ->
-                    while (cursor.moveToNext()) {
-                        val id = cursor.getString(0)
-                        val hex = cursor.getString(1)
-                        val rgb = tryParseHexToInt(hex)
-                        db.execSQL("UPDATE `themes` SET `representativeRgb` = ? WHERE `id` = ?", arrayOf(rgb, id))
-                    }
-                }
-
+                backfillRgbColumn(db, "themes", "representativeHex", "representativeRgb")
                 // Backfill photos.dominantRgb from existing dominantHex values
-                db.query("SELECT id, dominantHex FROM photos").use { cursor ->
+                backfillRgbColumn(db, "photos", "dominantHex", "dominantRgb")
+
+                // Drop old hex columns (Room's entity no longer maps them as DB columns).
+                // SQLite < 3.35.0 doesn't support ALTER TABLE DROP COLUMN, so we rebuild
+                // the tables with explicit schema (preserving NOT NULL, PK, FK constraints).
+                dropAndRebuildThemes(db)
+                dropAndRebuildPhotos(db)
+            }
+
+            private fun backfillRgbColumn(db: SupportSQLiteDatabase, table: String,
+                                          hexCol: String, rgbCol: String) {
+                db.query("SELECT id, $hexCol FROM $table").use { cursor ->
                     while (cursor.moveToNext()) {
                         val id = cursor.getString(0)
                         val hex = cursor.getString(1)
                         val rgb = tryParseHexToInt(hex)
-                        db.execSQL("UPDATE `photos` SET `dominantRgb` = ? WHERE `id` = ?", arrayOf(rgb, id))
+                        db.execSQL("UPDATE `$table` SET `$rgbCol` = ? WHERE `id` = ?",
+                            arrayOf(rgb, id))
                     }
                 }
+            }
+
+            private fun dropAndRebuildThemes(db: SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS `themes_new` (
+                        `id` TEXT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `representativeRgb` INTEGER NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        `updatedAt` INTEGER NOT NULL,
+                        PRIMARY KEY(`id`)
+                    )""")
+                db.execSQL("""INSERT INTO `themes_new` (`id`, `name`, `representativeRgb`, `createdAt`, `updatedAt`)
+                        SELECT `id`, `name`, `representativeRgb`, `createdAt`, `updatedAt` FROM `themes`""")
+                db.execSQL("DROP TABLE `themes`")
+                db.execSQL("ALTER TABLE `themes_new` RENAME TO `themes`")
+            }
+
+            private fun dropAndRebuildPhotos(db: SupportSQLiteDatabase) {
+                db.execSQL("""CREATE TABLE IF NOT EXISTS `photos_new` (
+                        `id` TEXT NOT NULL,
+                        `themeId` TEXT NOT NULL,
+                        `imagePath` TEXT NOT NULL,
+                        `dominantRgb` INTEGER NOT NULL,
+                        `isSeed` INTEGER NOT NULL DEFAULT 0,
+                        `capturedAt` INTEGER NOT NULL,
+                        `populationShare` REAL,
+                        `topVsSecondRatio` REAL,
+                        `isLowConfidence` INTEGER,
+                        PRIMARY KEY(`id`),
+                        FOREIGN KEY(`themeId`) REFERENCES `themes`(`id`) ON DELETE CASCADE
+                    )""")
+                db.execSQL("""INSERT INTO `photos_new` (`id`, `themeId`, `imagePath`, `dominantRgb`, `isSeed`, `capturedAt`, `populationShare`, `topVsSecondRatio`, `isLowConfidence`)
+                        SELECT `id`, `themeId`, `imagePath`, `dominantRgb`, `isSeed`, `capturedAt`, `populationShare`, `topVsSecondRatio`, `isLowConfidence` FROM `photos`""")
+                db.execSQL("DROP TABLE `photos`")
+                db.execSQL("ALTER TABLE `photos_new` RENAME TO `photos`")
+                // Re-create indices that Room expects
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_photos_themeId` ON `photos`(`themeId`)")
             }
 
             private fun tryParseHexToInt(hex: String): Int {
                 val s = if (hex.startsWith("#")) hex.drop(1) else hex
                 return if (s.length == 6) s.toIntOrNull(16) ?: 0x808080 else 0x808080
+            }
+        }
+
+        // ADR-0024: add the maskCoverage column to photos for subject-mask
+        // coverage fraction. Nullable: pre-saliency rows keep NULL, and
+        // null-mask fallbacks also record NULL.
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `photos` ADD COLUMN `maskCoverage` REAL")
             }
         }
 

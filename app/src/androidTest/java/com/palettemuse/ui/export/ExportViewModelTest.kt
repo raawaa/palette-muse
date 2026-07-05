@@ -39,12 +39,13 @@ class ExportViewModelTest {
     private lateinit var repo: ThemeRepository
     private lateinit var bitmapStorage: BitmapStorage
     private lateinit var context: Context
-    private val renderer = PosterRenderer()
+    private lateinit var renderer: PosterRenderer
     private lateinit var exporter: BitmapStorage
     private val dispatcher = StandardTestDispatcher()
 
     @Before fun setup() {
         context = ApplicationProvider.getApplicationContext<Context>()
+        renderer = PosterRenderer(context)
         val inlineExecutor = java.util.concurrent.Executor { it.run() }
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java)
             .allowMainThreadQueries()

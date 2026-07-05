@@ -1,16 +1,27 @@
 package com.palettemuse.core
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.RectF
+import androidx.core.content.res.ResourcesCompat
+import com.palettemuse.R
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PosterRenderer @Inject constructor() {
+class PosterRenderer @Inject constructor(
+    @ApplicationContext private val context: Context
+) {
+
+    // Cache the artistic typeface for theme.name rendering
+    private val huiwenTypeface: Typeface? by lazy {
+        ResourcesCompat.getFont(context, R.font.huiwen_mincho)
+    }
 
     enum class TemplateType { GRID, FILM, JOURNAL, MINIMAL }
 
@@ -124,7 +135,11 @@ class PosterRenderer @Inject constructor() {
             color = textColor
             this.textSize = textSize
             isAntiAlias = true
-            typeface = if (template == TemplateType.JOURNAL) Typeface.create(Typeface.SERIF, Typeface.ITALIC) else Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+            typeface = if (template == TemplateType.JOURNAL) {
+                Typeface.create(Typeface.SERIF, Typeface.ITALIC)
+            } else {
+                huiwenTypeface ?: Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+            }
         }
         canvas.drawText(config.title, 40f, h * 0.95f, textPaint)
         // draw shadeRamp

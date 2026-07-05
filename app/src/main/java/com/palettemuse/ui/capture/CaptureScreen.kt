@@ -14,6 +14,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -76,16 +79,24 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.palettemuse.camera.CameraManager
 import com.palettemuse.theme.Dimens
+import com.palettemuse.theme.HuiwenMincho
 import com.palettemuse.theme.RoseGold
 
 @Composable
@@ -187,8 +198,13 @@ fun CaptureScreen(
                             )
                             val target = uiState.targetTheme
                             Text(
-                                text = if (target.isFallback) "未匹配到主题"
-                                       else "${target.name} ${target.matchPct}% Match",
+                                text = if (target.isFallback) AnnotatedString("未匹配到主题")
+                                       else buildAnnotatedString {
+                                           withStyle(SpanStyle(fontFamily = HuiwenMincho)) {
+                                               append(target.name)
+                                           }
+                                           append(" ${target.matchPct}% Match")
+                                       },
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = RoseGold
@@ -267,9 +283,29 @@ fun CaptureScreen(
             }
         }
 
-        // === Layer 7: Post-capture confirmation sheet ===
-        uiState.pendingCapture?.let { pending ->
-            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+        // === Layer 7: Post-capture extraction animation ===
+        // Sits above the camera layer while the capture is being analyzed.
+        // Plays for ~1200ms, then resets extractionMode so the confirm
+        // sheet below becomes visible. Two visually distinct modes:
+        //   SUBJECT_LOCKED — glow ring + radial bloom from center
+        //   FALLBACK — radial bloom only (no ring)
+        ExtractionAnimation(
+            mode = uiState.extractionMode,
+            colorArgb = uiState.extractedColor,
+            onAnimationEnd = viewModel::onExtractionAnimationEnd
+        )
+
+        // === Layer 8: Post-capture confirmation sheet ===
+        // Hidden while the extraction animation plays (no overlap); fades in
+        // once the animation completes and extractionMode resets to NONE.
+        AnimatedVisibility(
+            visible = uiState.extractionMode == ExtractionMode.NONE &&
+                uiState.pendingCapture != null,
+            enter = fadeIn(animationSpec = tween(durationMillis = 250)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 250)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            uiState.pendingCapture?.let { pending ->
                 CaptureConfirmSheet(
                     pending = pending,
                     onConfirm = viewModel::confirmCapture,
@@ -279,7 +315,7 @@ fun CaptureScreen(
             }
         }
 
-        // === Layer 8: Capture failure feedback (Snackbar) ===
+        // === Layer 9: Capture failure feedback (Snackbar) ===
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
@@ -287,7 +323,7 @@ fun CaptureScreen(
                 .padding(bottom = 110.dp) // clear the shutter controls
         )
 
-        // === Layer 9: Full-screen shutter flash overlay (issue #31 / ADR-0018) ===
+        // === Layer 10: Full-screen shutter flash overlay (issue #31 / ADR-0018) ===
         // Sits last in the outer Box so its zIndex(10f) wins over every other
         // layer. Driven by [shutterTick]; each press increments and re-fires
         // the alpha ramp (0 → 0.8 in 20ms, 0.8 → 0 in 100ms).
@@ -533,7 +569,17 @@ fun CaptureConfirmSheet(
     onDismiss: () -> Unit
 ) {
     val themeName = pending.matchedTheme?.name ?: "新主题"
-    val action = if (pending.matchedTheme != null) "归入【$themeName】？" else "为这个颜色创建新主题？"
+    val action: AnnotatedString = if (pending.matchedTheme != null) {
+        buildAnnotatedString {
+            append("归入【")
+            withStyle(SpanStyle(fontFamily = HuiwenMincho)) {
+                append(themeName)
+            }
+            append("】？")
+        }
+    } else {
+        AnnotatedString("为这个颜色创建新主题？")
+    }
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -546,7 +592,7 @@ fun CaptureConfirmSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(action, color = Color(0xFF8A4853), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    Text(text = action, color = Color(0xFF8A4853), fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 val retakeBorder = if (pending.isLowConfidence) {
                     BorderStroke(1.5.dp, Color(0xFF8A4853))
                 } else {
@@ -608,6 +654,186 @@ internal fun LowConfidenceHint(visible: Boolean) {
         )
     }
 }
+
+/**
+ * Post-shutter extraction animation, covering the full shutter-to-confirm
+ * transition. Three active phases:
+ *
+ * - [ExtractionMode.SCANNING]: inference in progress — a neutral radar-pulse
+ *   plays immediately at shutter press, covering mask+color-analysis latency.
+ * - [ExtractionMode.SUBJECT_LOCKED]: reveal — full-viewport glow ring +
+ *   vivid radial bloom of the extracted color (a subject mask was applied).
+ * - [ExtractionMode.FALLBACK]: reveal — whole-frame bloom, NO ring.
+ *
+ * SCANNING transitions smoothly into the reveal: when the ViewModel sets the
+ * mode to SUBJECT_LOCKED/FALLBACK, the scanning sub-tree is disposed and the
+ * reveal bloom composes fresh. [onAnimationEnd] is called only after the
+ * reveal completes, never during scanning.
+ */
+@Composable
+private fun ExtractionAnimation(
+    mode: ExtractionMode,
+    colorArgb: Int?,
+    onAnimationEnd: () -> Unit,
+) {
+    if (mode == ExtractionMode.NONE) return
+    Box(
+        modifier = Modifier.fillMaxSize().zIndex(9f),
+        contentAlignment = Alignment.Center
+    ) {
+        when (mode) {
+            ExtractionMode.SCANNING -> ScanningIndicator()
+            ExtractionMode.SUBJECT_LOCKED, ExtractionMode.FALLBACK -> RevealBloom(
+                isSubjectLocked = mode == ExtractionMode.SUBJECT_LOCKED,
+                colorArgb = colorArgb,
+                onAnimationEnd = onAnimationEnd,
+            )
+            ExtractionMode.NONE -> Unit
+        }
+    }
+}
+
+/**
+ * Scanning phase (#54): a looping radar-pulse that starts within one frame of
+ * the shutter press and plays for the duration of mask inference + color
+ * analysis. Neutral color (the extracted color is not yet known). Two
+ * concentric rings expand outward and fade, phased apart so there is always
+ * a ring on screen — reads as "searching," visually distinct from the
+ * colored reveal bloom. Never calls [onAnimationEnd].
+ */
+@Composable
+private fun ScanningIndicator() {
+    val transition = rememberInfiniteTransition(label = "scanning")
+    val pulse1 by transition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = { it }),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "pulse1",
+    )
+    val pulse2 by transition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = { it }),
+            repeatMode = RepeatMode.Restart,
+            initialStartOffset = androidx.compose.animation.core.StartOffset(600),
+        ),
+        label = "pulse2",
+    )
+    val scanningColor = Color.White
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+        val maxRadius = minOf(size.width, size.height) * 0.42f
+        // Each ring expands 0.2→1.0 radius while fading 0.7→0.0 alpha.
+        drawCircle(
+            color = scanningColor.copy(alpha = (1f - pulse1) * 0.7f),
+            radius = maxRadius * (0.2f + 0.8f * pulse1),
+            style = Stroke(width = 3f),
+            center = center,
+        )
+        drawCircle(
+            color = scanningColor.copy(alpha = (1f - pulse2) * 0.7f),
+            radius = maxRadius * (0.2f + 0.8f * pulse2),
+            style = Stroke(width = 3f),
+            center = center,
+        )
+        // Steady focus dot.
+        drawCircle(
+            color = scanningColor.copy(alpha = 0.5f),
+            radius = 6f,
+            center = center,
+        )
+    }
+}
+
+/**
+ * Reveal phase (#53): a vivid colored bloom that plays once inference
+ * completes. Three serialized phases — expand → hold → contract (~1100ms) —
+ * then calls [onAnimationEnd] so the caller resets extractionMode to NONE,
+ * fading in the confirm sheet. No two phases animate the same property
+ * concurrently.
+ */
+@Composable
+private fun RevealBloom(
+    isSubjectLocked: Boolean,
+    colorArgb: Int?,
+    onAnimationEnd: () -> Unit,
+) {
+    val composeColor = if (colorArgb != null) Color(
+        red = ((colorArgb shr 16) and 0xFF) / 255f,
+        green = ((colorArgb shr 8) and 0xFF) / 255f,
+        blue = (colorArgb and 0xFF) / 255f
+    ) else Color(0xFF8A4853)
+
+    val bloomProgress = remember { Animatable(0f) }
+    val glowAlpha = remember { Animatable(0f) }
+
+    LaunchedEffect(isSubjectLocked, colorArgb) {
+        bloomProgress.snapTo(0f)
+        glowAlpha.snapTo(0f)
+        // Phase 1 (expand): bloom 0→1; glow 0→0.75 in subject-locked mode.
+        coroutineScope {
+            launch { bloomProgress.animateTo(1f, tween(EXPAND_MS)) }
+            if (isSubjectLocked) {
+                launch { glowAlpha.animateTo(0.75f, tween(EXPAND_MS)) }
+            }
+        }
+        // Phase 2 (hold): pause at peak so the color reads clearly.
+        delay(HOLD_MS.toLong())
+        // Phase 3 (contract): bloom 1→0; glow fades out. Previous phase's
+        // coroutines have joined, so bloomProgress again has one writer.
+        coroutineScope {
+            launch { bloomProgress.animateTo(0f, tween(CONTRACT_MS)) }
+            if (isSubjectLocked) {
+                launch { glowAlpha.animateTo(0f, tween(CONTRACT_MS)) }
+            }
+        }
+        onAnimationEnd()
+    }
+
+    // Glow ring — full-viewport scale, subject-locked only.
+    if (isSubjectLocked) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+            val base = minOf(size.width, size.height) * 0.35f
+            val ringRadius = base * (0.85f + 0.15f * bloomProgress.value)
+            drawCircle(
+                color = composeColor.copy(alpha = glowAlpha.value * 0.35f),
+                radius = ringRadius * 1.5f,
+            )
+            drawCircle(
+                color = composeColor.copy(alpha = glowAlpha.value * 0.85f),
+                radius = ringRadius,
+                style = Stroke(width = 8f * (0.6f + 0.4f * bloomProgress.value))
+            )
+        }
+    }
+    // Vivid radial bloom.
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+        val maxRadius = size.width.coerceAtLeast(size.height) * 0.75f
+        val currentRadius = maxRadius * bloomProgress.value
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    composeColor.copy(alpha = 0.85f * bloomProgress.value),
+                    composeColor.copy(alpha = 0.4f * bloomProgress.value),
+                    Color.Transparent
+                ),
+                center = center,
+                radius = currentRadius.coerceAtLeast(1f)
+            ),
+            radius = currentRadius.coerceAtLeast(1f),
+            center = center,
+        )
+    }
+}
+
+/** Extraction-animation phase durations (ms). */
+private const val EXPAND_MS = 450
+private const val HOLD_MS = 300
+private const val CONTRACT_MS = 350
 
 @Preview(name = "LowConfidenceHint — visible", showBackground = true, backgroundColor = 0xFFFCF9F8)
 @Composable

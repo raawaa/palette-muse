@@ -73,6 +73,14 @@ android {
         excludes += "/META-INF/{AL2.0,LGPL2.1}"
       }
     }
+
+    // InSPyReNet ONNX model in assets is ~28 MB. Prevent AAPT from compressing
+    // it so assets.open().readBytes() doesn't fail on the streaming-compression
+    // limit (files > 2 MB stored compressed inside the APK can't be opened as a
+    // stream directly).
+    androidResources {
+      noCompress.add("onnx")
+    }
 }
 
 kotlin {
@@ -157,4 +165,7 @@ dependencies {
 
   // Coil
   implementation(libs.coil.compose)
+
+  // ONNX Runtime Mobile (InSPyReNet saliency model)
+  implementation(libs.onnxruntime.android)
 }

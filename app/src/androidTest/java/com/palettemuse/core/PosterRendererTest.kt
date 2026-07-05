@@ -1,17 +1,28 @@
 package com.palettemuse.core
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Color
+import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class PosterRendererTest {
-    private val renderer = PosterRenderer()
+    private lateinit var renderer: PosterRenderer
+
+    @Before
+    fun setup() {
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        renderer = PosterRenderer(ctx)
+    }
+
+    // ... existing tests remain the same
 
     private fun stubPhoto(color: Int, size: Int = 100): Bitmap =
         Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888).apply { eraseColor(color) }

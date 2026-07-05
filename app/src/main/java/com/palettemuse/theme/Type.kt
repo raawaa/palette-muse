@@ -26,6 +26,10 @@ val PlusJakartaSans = FontFamily(
     Font(R.font.plus_jakarta_sans, FontWeight.Bold)
 )
 
+val HuiwenMincho = FontFamily(
+    Font(R.font.huiwen_mincho, FontWeight.Normal)
+)
+
 val Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = PlayfairDisplay,

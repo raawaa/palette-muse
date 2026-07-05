@@ -48,6 +48,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.activity.compose.BackHandler
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -68,6 +69,7 @@ import com.palettemuse.theme.Dimens
 import com.palettemuse.theme.OnSurface
 import com.palettemuse.theme.OnSurfaceVariant
 import com.palettemuse.theme.OutlineVariant
+import com.palettemuse.theme.HuiwenMincho
 import com.palettemuse.theme.PlayfairDisplay
 import com.palettemuse.theme.PlusJakartaSans
 import com.palettemuse.theme.PrimaryDesign
@@ -89,6 +91,11 @@ fun HomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var deleteConfirmThemeId by remember { mutableStateOf<String?>(null) }
+
+    // Exit batch delete mode on system back press
+    BackHandler(enabled = uiState.isDeleting) {
+        viewModel.exitDeleteMode()
+    }
 
     Box(
         modifier = Modifier
@@ -224,7 +231,10 @@ fun HomeScreen(
 
         // ===== Bottom Navigation Bar =====
         BottomNav(
-            onCapture = onNavigateToCapture,
+            onCapture = {
+                if (uiState.isDeleting) viewModel.exitDeleteMode()
+                onNavigateToCapture()
+            },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
 
@@ -346,7 +356,7 @@ private fun ThemeCard(
                 Spacer(Modifier.height(6.dp))
                 Text(
                     text = theme.name,
-                    fontFamily = PlusJakartaSans,
+                    fontFamily = HuiwenMincho,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 18.sp,
                     color = OnSurface,

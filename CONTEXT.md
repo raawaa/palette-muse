@@ -35,22 +35,40 @@ _Avoid_: 拍照, shot (a capture carries color extraction and attribution; a
 plain photo does not).
 
 **Captured color (捕获色)**:
-The whole-photo dominant color of a single photo — the population-weighted
-centroid of the largest perceptual color family (the same family the confidence
-signals below are measured over — see ADR-0020 and ADR-0021), measured at the
-moment of capture and stored as that photo's attribute. It is what "a captured
+The dominant color of a single photo, extracted at the moment of capture and
+stored as that photo's attribute. When saliency locks a **subject region** (see
+below; ADR-0024), the dominant is the population-weighted centroid of the
+largest perceptual color family *inside that subject region*; otherwise it
+falls back to the whole-photo dominant (the pre-saliency behaviour). The
+confidence signals below are measured over the same region the dominant came
+from. See ADR-0020 and ADR-0021. It is what "a captured
 color" in match score refers to. When a photo joins an existing theme, its
 captured color is recorded as the photo's own and never overwrites that theme's
 representative color. Every captured color carries a `Captured color
 confidence` alongside the hex so the UI can flag low-confidence picks.
 _Avoid_: 样本色, sample color.
 
+**Subject region (主体区域)**:
+The part of a photo a salient-object-detection model (InSPyReNet, ADR-0024)
+identifies as the visual subject, expressed as a per-pixel mask. When a subject
+is locked, the captured color and its confidence signals are measured over this
+region alone — background pixels do not vote. Saliency runs **post-shutter
+only**; the viewfinder sees no mask. When the model fails to load, inference
+throws, or the mask is degenerate (`maskCoverage` outside 0.05–0.95), no
+subject is locked and the capture falls back to whole-photo dominant. The mask
+cannot read user intent — a non-salient but desired subject (a side stem vs a
+central plant) is sometimes missed; this intent gap is a known ~1/5 ceiling.
+_Avoid_: foreground, ROI, focus area.
+
 **Captured color confidence (捕获色置信度)**:
-A two-signal measure of how much the captured color stands for the photo's
+A three-signal measure of how much the captured color stands for the photo's
 actual dominant, as opposed to being one of several substantial swatches.
 `populationShare` is the largest **perceptual color family's** pixel count
-divided by the total pixel count; `topVsSecondRatio` is that family's pixel
-count divided by the second-largest family's. A perceptual color family is the
+divided by the total pixel count of the region the signals are measured over
+(the **subject region** when saliency locks one, otherwise the whole photo);
+`topVsSecondRatio` is that family's pixel count divided by the second-largest
+family's; `maskCoverage` is the subject mask's fraction of the frame (null when
+no subject is locked), used to flag degenerate masks outside 0.05–0.95. A perceptual color family is the
 set of k-means clusters a human would call the same color (merged by CIELAB
 distance) — measuring share over raw single clusters systematically deflates
 the signal whenever a visually-uniform color varies slightly across pixels
@@ -58,7 +76,7 @@ the signal whenever a visually-uniform color varies slightly across pixels
 below the `CaptureConfidencePolicy` thresholds; a low-confidence capture is
 still recorded but flagged to the user so they can override the pick or spin
 up a new theme. The current threshold values are set in the policy module and
-are calibration seeds — see ADR-0014 and ADR-0020.
+are calibration seeds — see ADR-0014, ADR-0020, and ADR-0024.
 
 **Persistence**: on a confirmed photo, the two signals and the
 `isLowConfidence` verdict are stored alongside the photo so a low-confidence
@@ -105,3 +123,22 @@ _Avoid_: moodboard, 图片, image.
 A graduated set of darker shades of a single color, used to style a poster's
 color strip. Decorative — it ignores the theme's other captured colors.
 _Avoid_: palette, tint ramp.
+
+**Chroma boost (色度增强)** — _superseded by subject-region saliency (ADR-0024)_:
+A technique that applies a perceptual saturation multiplier to each color
+family's score during dominant-family selection: `score = population × (1.0 + k × saturation)`.
+Families with high CIELAB saturation (vivid reds, blues, purples) get a
+population boost, making them more likely to be selected as the dominant even
+when their raw pixel count is lower. The goal is to better match human
+perception when a photo has a vividly colored subject against a neutral
+background (Issue #47).
+_Experiment data_: `filesDir/experiment/results.jsonl` (JSONL).
+_Retrieval_: `adb exec-out run-as com.palettemuse cat files/experiment/results.jsonl`.
+
+**CIELAB saturation (CIELAB 饱和度)**:
+The perceptual measure used for chroma boost weighting. Defined as
+`C* / L*` where `C* = sqrt(a*² + b*²)` and `L*` is the perceptual lightness
+(CIE 1976). A guard of `max(L*, 1.0)` prevents division by near-zero values.
+Practical range: ~0 for neutral grays, ~0.95 for yellow, ~2.0 for red, ~3.1
+for blue. This is NOT HSL saturation — it accounts for the fact that dark
+colors need less chroma to appear vivid than light colors.

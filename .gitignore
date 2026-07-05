@@ -27,3 +27,17 @@ local.properties
 
 # Reason IDE auto-generated metadata
 .reasonix/
+
+# InSPyReNet ONNX model (~28 MB), bundled via tools/download_model.sh
+*.onnx
+# Session logs (not source)
+session-*.md
+omp-session-*.html
+
+# Experiment scratch: chroma-boost data, saliency prototype artifacts
+tools/photos/
+tools/saliency_prototype/
+tools/analyze_experiment.py
+tools/chroma_boost_report.html
+tools/experiment_results.jsonl
+tools/subject_diagnostic.txt
