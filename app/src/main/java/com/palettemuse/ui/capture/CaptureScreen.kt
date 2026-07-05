@@ -16,6 +16,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -89,6 +90,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -294,8 +296,16 @@ fun CaptureScreen(
         )
 
         // === Layer 8: Post-capture confirmation sheet ===
-        uiState.pendingCapture?.let { pending ->
-            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+        // Hidden while the extraction animation plays (no overlap); fades in
+        // once the animation completes and extractionMode resets to NONE.
+        AnimatedVisibility(
+            visible = uiState.extractionMode == ExtractionMode.NONE &&
+                uiState.pendingCapture != null,
+            enter = fadeIn(animationSpec = tween(durationMillis = 250)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 250)),
+            modifier = Modifier.align(Alignment.BottomCenter)
+        ) {
+            uiState.pendingCapture?.let { pending ->
                 CaptureConfirmSheet(
                     pending = pending,
                     onConfirm = viewModel::confirmCapture,
@@ -646,18 +656,19 @@ internal fun LowConfidenceHint(visible: Boolean) {
 }
 
 /**
- * Post-shutter extraction animation: a color bloom that plays during the
+ * Post-shutter extraction animation: a vivid color bloom that plays during the
  * shutter-to-confirm-sheet transition, covering inference latency.
  *
- * Two visually distinct modes:
- * - [ExtractionMode.SUBJECT_LOCKED]: a pulsing center glow ring + expanding
- *   radial bloom from the center, signaling that a subject mask was applied.
- * - [ExtractionMode.FALLBACK]: a full-frame radial bloom with no ring,
+ * Two visibly distinct modes:
+ * - [ExtractionMode.SUBJECT_LOCKED]: a full-viewport glow ring + expanding
+ *   radial bloom of the extracted color, signaling a subject mask was applied.
+ * - [ExtractionMode.FALLBACK]: a whole-frame radial bloom with NO ring,
  *   signaling the fallback whole-photo extraction was used.
  *
- * The animation runs for [ANIMATION_DURATION_MS] (~1200ms) then calls
- * [onAnimationEnd] to signal completion. The caller should reset
- * [CaptureUiState.extractionMode] to [ExtractionMode.NONE] in the callback.
+ * The animation runs in three serialized phases — expand → hold → contract
+ * (~1100ms total) — then calls [onAnimationEnd] so the caller resets
+ * [CaptureUiState.extractionMode] to [ExtractionMode.NONE], which fades in the
+ * confirm sheet. No two phases animate the same property concurrently.
  */
 @Composable
 private fun ExtractionAnimation(
@@ -678,74 +689,82 @@ private fun ExtractionAnimation(
     val isSubjectLocked = mode == ExtractionMode.SUBJECT_LOCKED
 
     LaunchedEffect(mode) {
-        // Phase 1 (0-300ms): bloom expands, glow fades in (subject-locked only)
         bloomProgress.snapTo(0f)
         glowAlpha.snapTo(0f)
-        launch {
-            bloomProgress.animateTo(1f, animationSpec = tween(durationMillis = 600))
+        // Phase 1 (expand): bloom 0→1; glow 0→0.75 in subject-locked mode.
+        // Each Animatable has exactly one writer this phase.
+        coroutineScope {
+            launch { bloomProgress.animateTo(1f, tween(EXPAND_MS)) }
+            if (isSubjectLocked) {
+                launch { glowAlpha.animateTo(0.75f, tween(EXPAND_MS)) }
+            }
         }
-        if (isSubjectLocked) {
-            glowAlpha.animateTo(0.6f, animationSpec = tween(durationMillis = 300))
+        // Phase 2 (hold): pause at peak so the color reads clearly.
+        delay(HOLD_MS.toLong())
+        // Phase 3 (contract): bloom 1→0; glow fades out. Previous phase's
+        // coroutines have joined, so bloomProgress again has one writer.
+        coroutineScope {
+            launch { bloomProgress.animateTo(0f, tween(CONTRACT_MS)) }
+            if (isSubjectLocked) {
+                launch { glowAlpha.animateTo(0f, tween(CONTRACT_MS)) }
+            }
         }
-        // Phase 2 (600-900ms): hold at peak
-        delay(300)
-        // Phase 3 (900-1200ms): fade out
-        launch {
-            bloomProgress.animateTo(0f, animationSpec = tween(durationMillis = 300))
-        }
-        glowAlpha.animateTo(0f, animationSpec = tween(durationMillis = 300))
         onAnimationEnd()
     }
 
+    // No dim overlay — the bloom itself is the visual (the previous black
+    // alpha pulse read as "screen flashes dim"; issue #53).
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.3f * (1f - bloomProgress.value)))
-            .zIndex(9f),
+        modifier = Modifier.fillMaxSize().zIndex(9f),
         contentAlignment = Alignment.Center
     ) {
-        // Glow ring for subject-locked mode
+        // Glow ring — full-viewport scale, subject-locked only.
         if (isSubjectLocked) {
-            val ringRadius = 60f + 40f * bloomProgress.value
-            Canvas(modifier = Modifier.size(240.dp)) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
                 val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
-                // Outer glow ring
+                val base = minOf(size.width, size.height) * 0.35f
+                val ringRadius = base * (0.85f + 0.15f * bloomProgress.value)
+                // Outer soft glow
                 drawCircle(
-                    color = composeColor.copy(alpha = glowAlpha.value * 0.3f),
-                    radius = ringRadius * 1.4f + 20f,
+                    color = composeColor.copy(alpha = glowAlpha.value * 0.35f),
+                    radius = ringRadius * 1.5f,
                 )
-                // Inner ring
+                // Inner crisp ring
                 drawCircle(
-                    color = composeColor.copy(alpha = glowAlpha.value * 0.6f),
+                    color = composeColor.copy(alpha = glowAlpha.value * 0.85f),
                     radius = ringRadius,
-                    style = Stroke(width = 4f * (0.5f + 0.5f * bloomProgress.value))
+                    style = Stroke(width = 8f * (0.6f + 0.4f * bloomProgress.value))
                 )
             }
         }
 
-        // Radial bloom — expands in Phase 1, contracts in Phase 3
+        // Vivid radial bloom — high alpha so the extracted color is clearly
+        // visible against the camera preview.
         Canvas(modifier = Modifier.fillMaxSize()) {
-            val centerX = size.width / 2
-            val centerY = size.height / 2
-            val maxRadius = size.width.coerceAtLeast(size.height) * 0.8f
-            val currentRadius = maxRadius * bloomProgress.value * 1.2f
-
+            val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+            val maxRadius = size.width.coerceAtLeast(size.height) * 0.75f
+            val currentRadius = maxRadius * bloomProgress.value
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
+                        composeColor.copy(alpha = 0.85f * bloomProgress.value),
                         composeColor.copy(alpha = 0.4f * bloomProgress.value),
-                        composeColor.copy(alpha = 0.1f * bloomProgress.value),
                         Color.Transparent
                     ),
-                    center = androidx.compose.ui.geometry.Offset(centerX, centerY),
-                    radius = currentRadius.coerceAtLeast(10f)
+                    center = center,
+                    radius = currentRadius.coerceAtLeast(1f)
                 ),
-                radius = currentRadius.coerceAtLeast(10f),
-                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
+                radius = currentRadius.coerceAtLeast(1f),
+                center = center,
             )
         }
     }
 }
+
+/** Extraction-animation phase durations (ms). */
+private const val EXPAND_MS = 450
+private const val HOLD_MS = 300
+private const val CONTRACT_MS = 350
 
 @Preview(name = "LowConfidenceHint — visible", showBackground = true, backgroundColor = 0xFFFCF9F8)
 @Composable

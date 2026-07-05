@@ -1,6 +1,5 @@
 package com.palettemuse.ui.capture
 
-import android.app.Application
 import android.graphics.Bitmap
 import android.os.SystemClock
 import android.os.Trace
@@ -97,7 +96,6 @@ class CaptureViewModel @Inject constructor(
     private val captureConfidencePolicy: CaptureConfidencePolicy,
     private val subjectMaskProvider: SubjectMaskProvider,
     private val debugFrameDumper: DebugFrameDumper,
-    private val app: Application,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CaptureUiState())
@@ -136,7 +134,6 @@ class CaptureViewModel @Inject constructor(
             Trace.beginSection("capture.total")
             val t0 = SystemClock.elapsedRealtime()
             Log.i("CapturePerf", "shutter bitmap=${bitmap.width}x${bitmap.height}")
-            debugLog("shutter bitmap=${bitmap.width}x${bitmap.height}")
             _uiState.value = _uiState.value.copy(isAnalyzing = true)
             val saveJob = async(Dispatchers.IO) {
                 traceSection("capture.save") { bitmapStorage.saveCapture(bitmap) }
@@ -145,7 +142,6 @@ class CaptureViewModel @Inject constructor(
             val maskJob = async(Dispatchers.Default) {
                 traceSection("capture.mask") {
                     val r = subjectMaskProvider.provideMask(bitmap)
-                    debugLog("mask result: nonNull=${r != null} count=${r?.count { it } ?: -1}")
                     r
                 }
             }
@@ -157,7 +153,6 @@ class CaptureViewModel @Inject constructor(
             val (effectiveMask, maskCoverage) = if (mask != null) {
                 val total = DOWNSCALE_SIZE * DOWNSCALE_SIZE
                 val coverage = mask.count { it }.toDouble() / total
-                debugLog("mask coverage=$coverage")
                 if (coverage in 0.05..0.95) mask to coverage else null to null
             } else {
                 null to null
@@ -165,7 +160,6 @@ class CaptureViewModel @Inject constructor(
             // Set extraction mode and preview color as soon as the mask and
             // dominant are known — the UI starts the extraction animation.
             val mode = if (effectiveMask != null) ExtractionMode.SUBJECT_LOCKED else ExtractionMode.FALLBACK
-            debugLog("setting extractionMode=$mode coverage=$maskCoverage")
             _uiState.value = _uiState.value.copy(
                 extractionMode = mode
             )
@@ -197,17 +191,8 @@ class CaptureViewModel @Inject constructor(
                     maskCoverage = maskCoverage
                 )
             )
-            debugLog("sheet shown +${SystemClock.elapsedRealtime() - t0}ms mode=$mode color=#%06X".format(capturedWithCoverage.rgb and 0xFFFFFF))
             Log.i("CapturePerf", "sheet shown +${SystemClock.elapsedRealtime() - t0}ms")
         }
-    }
-
-    // [DEBUG-extanim] temporary file-based debug log (vivo suppresses logcat)
-    private fun debugLog(msg: String) {
-        try {
-            val file = java.io.File(app.filesDir, "debug_capture.log")
-            file.appendText("${System.currentTimeMillis()} $msg\n", Charsets.UTF_8)
-        } catch (_: Exception) {}
     }
 
     /**
