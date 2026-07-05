@@ -14,6 +14,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -87,6 +89,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import androidx.core.content.ContextCompat
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.palettemuse.camera.CameraManager
 import com.palettemuse.theme.Dimens
@@ -277,7 +281,19 @@ fun CaptureScreen(
             }
         }
 
-        // === Layer 7: Post-capture confirmation sheet ===
+        // === Layer 7: Post-capture extraction animation ===
+        // Sits above the camera layer while the capture is being analyzed.
+        // Plays for ~1200ms, then resets extractionMode so the confirm
+        // sheet below becomes visible. Two visually distinct modes:
+        //   SUBJECT_LOCKED — glow ring + radial bloom from center
+        //   FALLBACK — radial bloom only (no ring)
+        ExtractionAnimation(
+            mode = uiState.extractionMode,
+            colorArgb = uiState.extractedColor,
+            onAnimationEnd = viewModel::onExtractionAnimationEnd
+        )
+
+        // === Layer 8: Post-capture confirmation sheet ===
         uiState.pendingCapture?.let { pending ->
             Box(modifier = Modifier.align(Alignment.BottomCenter)) {
                 CaptureConfirmSheet(
@@ -289,7 +305,7 @@ fun CaptureScreen(
             }
         }
 
-        // === Layer 8: Capture failure feedback (Snackbar) ===
+        // === Layer 9: Capture failure feedback (Snackbar) ===
         SnackbarHost(
             hostState = snackbarHostState,
             modifier = Modifier
@@ -297,7 +313,7 @@ fun CaptureScreen(
                 .padding(bottom = 110.dp) // clear the shutter controls
         )
 
-        // === Layer 9: Full-screen shutter flash overlay (issue #31 / ADR-0018) ===
+        // === Layer 10: Full-screen shutter flash overlay (issue #31 / ADR-0018) ===
         // Sits last in the outer Box so its zIndex(10f) wins over every other
         // layer. Driven by [shutterTick]; each press increments and re-fires
         // the alpha ramp (0 → 0.8 in 20ms, 0.8 → 0 in 100ms).
@@ -626,6 +642,108 @@ internal fun LowConfidenceHint(visible: Boolean) {
             color = Color(0xFF8A4853),
             fontSize = 14.sp,
         )
+    }
+}
+
+/**
+ * Post-shutter extraction animation: a color bloom that plays during the
+ * shutter-to-confirm-sheet transition, covering inference latency.
+ *
+ * Two visually distinct modes:
+ * - [ExtractionMode.SUBJECT_LOCKED]: a pulsing center glow ring + expanding
+ *   radial bloom from the center, signaling that a subject mask was applied.
+ * - [ExtractionMode.FALLBACK]: a full-frame radial bloom with no ring,
+ *   signaling the fallback whole-photo extraction was used.
+ *
+ * The animation runs for [ANIMATION_DURATION_MS] (~1200ms) then calls
+ * [onAnimationEnd] to signal completion. The caller should reset
+ * [CaptureUiState.extractionMode] to [ExtractionMode.NONE] in the callback.
+ */
+@Composable
+private fun ExtractionAnimation(
+    mode: ExtractionMode,
+    colorArgb: Int?,
+    onAnimationEnd: () -> Unit,
+) {
+    if (mode == ExtractionMode.NONE) return
+
+    val composeColor = if (colorArgb != null) Color(
+        red = ((colorArgb shr 16) and 0xFF) / 255f,
+        green = ((colorArgb shr 8) and 0xFF) / 255f,
+        blue = (colorArgb and 0xFF) / 255f
+    ) else Color(0xFF8A4853) // default rose-gold fallback
+
+    val bloomProgress = remember { Animatable(0f) }
+    val glowAlpha = remember { Animatable(0f) }
+    val isSubjectLocked = mode == ExtractionMode.SUBJECT_LOCKED
+
+    LaunchedEffect(mode) {
+        // Phase 1 (0-300ms): bloom expands, glow fades in (subject-locked only)
+        bloomProgress.snapTo(0f)
+        glowAlpha.snapTo(0f)
+        launch {
+            bloomProgress.animateTo(1f, animationSpec = tween(durationMillis = 600))
+        }
+        if (isSubjectLocked) {
+            glowAlpha.animateTo(0.6f, animationSpec = tween(durationMillis = 300))
+        }
+        // Phase 2 (600-900ms): hold at peak
+        delay(300)
+        // Phase 3 (900-1200ms): fade out
+        launch {
+            bloomProgress.animateTo(0f, animationSpec = tween(durationMillis = 300))
+        }
+        glowAlpha.animateTo(0f, animationSpec = tween(durationMillis = 300))
+        onAnimationEnd()
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.3f * (1f - bloomProgress.value)))
+            .zIndex(9f),
+        contentAlignment = Alignment.Center
+    ) {
+        // Glow ring for subject-locked mode
+        if (isSubjectLocked) {
+            val ringRadius = 60f + 40f * bloomProgress.value
+            Canvas(modifier = Modifier.size(240.dp)) {
+                val center = androidx.compose.ui.geometry.Offset(size.width / 2, size.height / 2)
+                // Outer glow ring
+                drawCircle(
+                    color = composeColor.copy(alpha = glowAlpha.value * 0.3f),
+                    radius = ringRadius * 1.4f + 20f,
+                )
+                // Inner ring
+                drawCircle(
+                    color = composeColor.copy(alpha = glowAlpha.value * 0.6f),
+                    radius = ringRadius,
+                    style = Stroke(width = 4f * (0.5f + 0.5f * bloomProgress.value))
+                )
+            }
+        }
+
+        // Radial bloom — expands in Phase 1, contracts in Phase 3
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val centerX = size.width / 2
+            val centerY = size.height / 2
+            val maxRadius = size.width.coerceAtLeast(size.height) * 0.8f
+            val currentRadius = maxRadius * bloomProgress.value * 1.2f
+
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        composeColor.copy(alpha = 0.4f * bloomProgress.value),
+                        composeColor.copy(alpha = 0.1f * bloomProgress.value),
+                        Color.Transparent
+                    ),
+                    center = androidx.compose.ui.geometry.Offset(centerX, centerY),
+                    radius = currentRadius.coerceAtLeast(10f)
+                ),
+                radius = currentRadius.coerceAtLeast(10f),
+                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
+            )
+        }
     }
 }
 
